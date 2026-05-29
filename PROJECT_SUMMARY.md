@@ -10,6 +10,16 @@ It is explicitly *not* a single-user chatbot, a knowledge base, a CRUD/Notion cl
 
 **North Star:** turn vision into reality through human + AI teamwork.
 
+### Core Collaboration Principle
+
+HiveMind is **not** an AI collaboration platform — it is a **Human + AI collaboration platform**. Human-to-Human collaboration is a first-class citizen, equal to Human-to-AI collaboration. Every workspace and room must support:
+
+- **Human ↔ Human** collaboration
+- **Human ↔ AI** collaboration
+- **AI ↔ AI** collaboration
+
+Humans remain the primary owners of goals, decisions, and accountability. **AI agents are teammates, not replacements.**
+
 ## 2. Target Users
 
 - **University students** — assignments, group projects, research, presentations; need structure, work division, and execution help.
