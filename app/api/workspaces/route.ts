@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { errorResponse } from "@/lib/api";
+import { seedDefaultAgents } from "@/lib/agents/seed";
 
 // GET /api/workspaces
 // Returns all workspaces where the current user is a member, including the
@@ -17,7 +18,7 @@ export async function GET() {
         workspace: {
           include: {
             owner: { select: { id: true, name: true, email: true } },
-            _count: { select: { members: true } },
+            _count: { select: { members: true, agents: true } },
           },
         },
       },
@@ -27,6 +28,7 @@ export async function GET() {
       ...m.workspace,
       role: m.role,
       memberCount: m.workspace._count.members,
+      agentCount: m.workspace._count.agents,
     }));
 
     return NextResponse.json({ workspaces });
@@ -68,6 +70,15 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    // Every workspace starts with its default AI team (ARi + Cloudy). Seeding
+    // failures must not block workspace creation, so log and continue — the
+    // defaults can be restored later from the agents page.
+    try {
+      await seedDefaultAgents(workspace.id);
+    } catch (seedError) {
+      console.error("[api] Failed to seed default agents:", seedError);
+    }
 
     return NextResponse.json(
       { workspace: { ...workspace, role: "owner" } },

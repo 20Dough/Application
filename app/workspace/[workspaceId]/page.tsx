@@ -19,7 +19,6 @@ type WorkspaceDetail = {
 
 const COMING_SOON: { title: string; note: string }[] = [
   { title: "Rooms", note: "Coming later" },
-  { title: "AI Agents", note: "Coming later" },
   { title: "Memory", note: "Coming later" },
   { title: "Decisions", note: "Coming later" },
 ];
@@ -93,7 +92,7 @@ export default function WorkspacePage({
             </span>
           </div>
 
-          <div className="mt-8">
+          <div className="mt-8 grid gap-4 sm:grid-cols-2">
             <Link
               href={`/workspace/${workspaceId}/members`}
               className="inline-flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 px-5 py-4 transition-colors hover:border-neutral-600"
@@ -106,7 +105,21 @@ export default function WorkspacePage({
                   View the team, manage roles, and invite people
                 </span>
               </div>
-              <span className="ml-2 text-neutral-500">→</span>
+              <span className="ml-auto text-neutral-500">→</span>
+            </Link>
+            <Link
+              href={`/workspace/${workspaceId}/agents`}
+              className="inline-flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 px-5 py-4 transition-colors hover:border-neutral-600"
+            >
+              <div>
+                <span className="block font-semibold text-neutral-100">
+                  AI Agents
+                </span>
+                <span className="block text-xs text-neutral-500">
+                  Manage your AI teammates (ARi, Cloudy, and more)
+                </span>
+              </div>
+              <span className="ml-auto text-neutral-500">→</span>
             </Link>
           </div>
 

@@ -4,10 +4,12 @@
 // SQLite for development; kept conceptually PostgreSQL-compatible for production.
 //
 // Note: the Phase 1 placeholder models (Provider / Conversation / Message) were
-// replaced by the architecture's canonical entities. Phase 2 actively uses
-// User, Workspace, and WorkspaceMember; the remaining models are defined here so
-// later phases (rooms, agents, memory, decisions) build on a stable schema
-// without repeated migrations. No Phase 3+ behaviour is implemented yet.
+// replaced by the architecture's canonical entities. Phase 2 uses User,
+// Workspace, and WorkspaceMember; Phase 3 adds invitations/membership
+// management; Phase 4 activates the AI agent foundation (Agent / RoomAgent —
+// agent registry, profiles, and per-workspace default agents). The remaining
+// models (rooms, memory, decisions) are defined here so later phases build on a
+// stable schema without repeated migrations.
 
 generator client {
   provider = "prisma-client-js"

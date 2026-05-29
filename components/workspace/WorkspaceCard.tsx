@@ -9,6 +9,7 @@ export type WorkspaceCardData = {
   description?: string | null;
   role: string;
   memberCount?: number;
+  agentCount?: number;
 };
 
 export function WorkspaceCard({ workspace }: { workspace: WorkspaceCardData }) {
@@ -28,10 +29,24 @@ export function WorkspaceCard({ workspace }: { workspace: WorkspaceCardData }) {
       <p className="mt-2 line-clamp-2 text-sm text-neutral-400">
         {workspace.description || "No description"}
       </p>
-      {typeof workspace.memberCount === "number" && (
+      {(typeof workspace.memberCount === "number" ||
+        typeof workspace.agentCount === "number") && (
         <span className="mt-4 text-xs text-neutral-600">
-          {workspace.memberCount}{" "}
-          {workspace.memberCount === 1 ? "member" : "members"}
+          {typeof workspace.memberCount === "number" && (
+            <>
+              {workspace.memberCount}{" "}
+              {workspace.memberCount === 1 ? "member" : "members"}
+            </>
+          )}
+          {typeof workspace.memberCount === "number" &&
+            typeof workspace.agentCount === "number" &&
+            " · "}
+          {typeof workspace.agentCount === "number" && (
+            <>
+              {workspace.agentCount}{" "}
+              {workspace.agentCount === 1 ? "agent" : "agents"}
+            </>
+          )}
         </span>
       )}
     </Link>
