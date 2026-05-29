@@ -4,14 +4,17 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { canManageRooms } from "@/lib/roles";
 import { AgentAvatar } from "@/components/agents/AgentAvatar";
+import { RoomChat } from "@/components/rooms/chat/RoomChat";
 
-// RoomDetail — stateful container for a single room.
+// RoomDetail — stateful container for a single room (the room chat page).
 //
-// Shows the room's participants: the workspace's human members (a room's humans
-// are simply the workspace's humans) and the AI agents added to the room. For
-// owners/admins it owns the mutating actions: add an agent, remove an agent,
-// and set/clear the default agent. The API enforces every permission rule; this
-// component mirrors the permission check only to shape the UI.
+// Lays out the room as a chat: the conversation (RoomChat) is the primary panel
+// and a sidebar lists the room's participants — the workspace's human members (a
+// room's humans are simply the workspace's humans) and the AI agents added to
+// the room. For owners/admins the sidebar owns the mutating actions: add an
+// agent, remove an agent, and set/clear the default agent. The API enforces
+// every permission rule; this component mirrors the permission check only to
+// shape the UI.
 
 type RoomAgent = {
   id: string;
@@ -187,6 +190,14 @@ export function RoomDetail({
         </p>
       )}
 
+      <div className="grid gap-8 lg:grid-cols-3">
+        {/* Conversation — the primary panel. Only humans can post in this phase. */}
+        <div className="lg:col-span-2">
+          <RoomChat roomId={roomId} />
+        </div>
+
+        {/* Participants sidebar: AI agents and human members. */}
+        <aside className="space-y-8">
       {/* AI agents in the room */}
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-400">
@@ -328,6 +339,8 @@ export function RoomDetail({
           ))}
         </ul>
       </section>
+        </aside>
+      </div>
     </div>
   );
 }

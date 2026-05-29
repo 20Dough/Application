@@ -78,6 +78,14 @@ export function canManageRooms(role: string): boolean {
 }
 
 /**
+ * Owners, admins, and members can send messages in a room. Viewers are
+ * read-only: they can follow the conversation but cannot post.
+ */
+export function canSendMessages(role: string): boolean {
+  return role === "owner" || role === "admin" || role === "member";
+}
+
+/**
  * Decides whether an actor with `actorRole` may change the role of, or remove,
  * a member who currently holds `targetRole`.
  *
