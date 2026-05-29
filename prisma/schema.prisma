@@ -1,4 +1,14 @@
-// HiveMind — Phase 1 Foundation schema
+// HiveMind — Core schema
+//
+// Source of truth: ARCHITECTURE.md ("Required Core Entities").
+// SQLite for development; kept conceptually PostgreSQL-compatible for production.
+//
+// Note: the Phase 1 placeholder models (Provider / Conversation / Message) were
+// replaced by the architecture's canonical entities. Phase 2 actively uses
+// User, Workspace, and WorkspaceMember; the remaining models are defined here so
+// later phases (rooms, agents, memory, decisions) build on a stable schema
+// without repeated migrations. No Phase 3+ behaviour is implemented yet.
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,33 +18,211 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// AI providers participating in the hive (e.g. ARi = OpenAI, Cloudy = Anthropic)
-model Provider {
-  id        String    @id @default(cuid())
-  name      String    @unique
-  kind      String // "openai" | "anthropic"
-  model     String
-  createdAt DateTime  @default(now())
-  messages  Message[]
+// A human user.
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ownedWorkspaces Workspace[]       @relation("WorkspaceOwner")
+  memberships     WorkspaceMember[]
+  messages        Message[]
+  usageLogs       UsageLog[]
 }
 
-// A conversation thread within the hive
-model Conversation {
-  id        String    @id @default(cuid())
-  title     String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  messages  Message[]
+// A project or team space. The top-level container in HiveMind.
+model Workspace {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  ownerId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner           User             @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+  members         WorkspaceMember[]
+  invitations     Invitation[]
+  rooms           Room[]
+  agents          Agent[]
+  memoryItems     MemoryItem[]
+  projectContexts ProjectContext[]
+  decisions       Decision[]
+  usageLogs       UsageLog[]
+
+  @@index([ownerId])
 }
 
-// A single message authored by a user or a provider
+// Connects a human user to a workspace, with a role.
+// role: "owner" | "admin" | "member" | "viewer"
+model WorkspaceMember {
+  id          String   @id @default(cuid())
+  userId      String
+  workspaceId String
+  role        String   @default("member")
+  createdAt   DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@index([workspaceId])
+}
+
+// An invited user (email + role). Email delivery is deferred.
+// status: "pending" | "accepted" | "rejected"
+model Invitation {
+  id          String   @id @default(cuid())
+  workspaceId String
+  email       String
+  role        String   @default("member")
+  status      String   @default("pending")
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
+
+// A focused discussion space inside a workspace.
+model Room {
+  id             String   @id @default(cuid())
+  workspaceId    String
+  name           String
+  description    String?
+  defaultAgentId String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  workspace    Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  defaultAgent Agent?       @relation("RoomDefaultAgent", fields: [defaultAgentId], references: [id], onDelete: SetNull)
+  messages     Message[]
+  roomAgents   RoomAgent[]
+  memoryItems  MemoryItem[]
+  decisions    Decision[]
+
+  @@index([workspaceId])
+}
+
+// A chat message authored by a human, an AI agent, or the system.
+// senderType: "human" | "agent" | "system"
+// metadata: JSON string (mentionedAgentIds, provider, model, error, etc.)
 model Message {
-  id             String       @id @default(cuid())
-  conversationId String
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  role           String // "user" | "assistant" | "system"
-  content        String
-  providerId     String?
-  provider       Provider?    @relation(fields: [providerId], references: [id])
-  createdAt      DateTime     @default(now())
+  id         String   @id @default(cuid())
+  roomId     String
+  senderType String
+  userId     String?
+  agentId    String?
+  content    String
+  metadata   String?
+  createdAt  DateTime @default(now())
+
+  room  Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user  User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  agent Agent? @relation(fields: [agentId], references: [id], onDelete: SetNull)
+
+  @@index([roomId])
+}
+
+// An AI teammate. Database-driven; identity is separate from provider/model.
+model Agent {
+  id           String   @id @default(cuid())
+  workspaceId  String
+  name         String
+  displayName  String
+  provider     String
+  model        String
+  role         String
+  systemPrompt String
+  avatarUrl    String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  workspace       Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  roomAgents      RoomAgent[]
+  messages        Message[]
+  defaultForRooms Room[]      @relation("RoomDefaultAgent")
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId])
+}
+
+// Join table connecting agents to rooms.
+model RoomAgent {
+  id        String   @id @default(cuid())
+  roomId    String
+  agentId   String
+  createdAt DateTime @default(now())
+
+  room  Room  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, agentId])
+}
+
+// Long-term curated memory. importance: higher = more important.
+model MemoryItem {
+  id          String   @id @default(cuid())
+  workspaceId String
+  roomId      String?
+  title       String
+  content     String
+  importance  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  room      Room?     @relation(fields: [roomId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
+}
+
+// High-priority project identity and mission. Separate from MemoryItem.
+model ProjectContext {
+  id          String   @id @default(cuid())
+  workspaceId String
+  title       String
+  content     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
+
+// A decision summary generated from recent room messages.
+// actionItems: JSON string array.
+model Decision {
+  id          String   @id @default(cuid())
+  workspaceId String
+  roomId      String?
+  title       String
+  summary     String
+  actionItems String?
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  room      Room?     @relation(fields: [roomId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
+}
+
+// Tracks AI usage for cost/auditing.
+model UsageLog {
+  id           String   @id @default(cuid())
+  userId       String?
+  workspaceId  String?
+  provider     String
+  model        String
+  inputTokens  Int?
+  outputTokens Int?
+  totalCost    Float?
+  createdAt    DateTime @default(now())
+
+  user      User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
 }
