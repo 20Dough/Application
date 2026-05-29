@@ -69,6 +69,15 @@ export function canManageAgents(role: string): boolean {
 }
 
 /**
+ * Owners and admins can manage the workspace's rooms (create, edit, delete,
+ * add/remove AI agents, set the default agent). Members and viewers can view
+ * rooms but not change them.
+ */
+export function canManageRooms(role: string): boolean {
+  return role === "owner" || role === "admin";
+}
+
+/**
  * Decides whether an actor with `actorRole` may change the role of, or remove,
  * a member who currently holds `targetRole`.
  *
