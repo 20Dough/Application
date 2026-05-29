@@ -1,19 +1,14 @@
 import { db } from "@/lib/db";
 import type { WorkspaceMember } from "@prisma/client";
 
-// Workspace permissions.
+// Database-backed workspace permission helpers.
 //
-// Roles (highest → lowest privilege): owner, admin, member, viewer.
-//
-//   owner   — manage and delete the workspace (full control)
-//   admin   — manage the workspace (name/description, future agents/rooms)
-//   member  — view the workspace, participate
-//   viewer  — view the workspace only
-//
-// Role checks are intentionally pure functions so they can be reused on both
-// the API and (future) UI sides without touching the database.
+// Pure, db-free role logic (role constants, rank, canManage* checks) lives in
+// lib/roles.ts so it can also be used in client components. This module adds the
+// checks that need the database, and re-exports the pure helpers so existing
+// server-side imports from "@/lib/permissions" keep working.
 
-export type WorkspaceRole = "owner" | "admin" | "member" | "viewer";
+export * from "@/lib/roles";
 
 /**
  * Returns the membership record linking a user to a workspace, or null if the
@@ -43,16 +38,6 @@ export async function requireWorkspaceMember(
     throw new ForbiddenError("You are not a member of this workspace");
   }
   return membership;
-}
-
-/** Owners and admins can manage (update) a workspace. */
-export function canManageWorkspace(role: string): boolean {
-  return role === "owner" || role === "admin";
-}
-
-/** Only the owner can delete a workspace. */
-export function canDeleteWorkspace(role: string): boolean {
-  return role === "owner";
 }
 
 /** Thrown when an authenticated user lacks permission for an action. */

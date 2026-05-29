@@ -7,6 +7,7 @@ import {
   type WorkspaceCardData,
 } from "@/components/workspace/WorkspaceCard";
 import { CreateWorkspaceForm } from "@/components/workspace/CreateWorkspaceForm";
+import { PendingInvitations } from "@/components/workspace/PendingInvitations";
 
 // Dashboard — lists the current user's workspaces and lets them create one.
 
@@ -41,6 +42,10 @@ export default function DashboardPage() {
           <p className="mt-1 text-sm text-neutral-500">
             Shared spaces where your human and AI team work together.
           </p>
+
+          <div className="mt-6">
+            <PendingInvitations onAccepted={loadWorkspaces} />
+          </div>
 
           <div className="mt-6">
             {loading ? (

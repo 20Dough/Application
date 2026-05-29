@@ -18,8 +18,7 @@ type WorkspaceDetail = {
 };
 
 const COMING_SOON: { title: string; note: string }[] = [
-  { title: "Rooms", note: "Coming in Phase 3" },
-  { title: "Human Members", note: "Coming later" },
+  { title: "Rooms", note: "Coming later" },
   { title: "AI Agents", note: "Coming later" },
   { title: "Memory", note: "Coming later" },
   { title: "Decisions", note: "Coming later" },
@@ -94,7 +93,24 @@ export default function WorkspacePage({
             </span>
           </div>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-8">
+            <Link
+              href={`/workspace/${workspaceId}/members`}
+              className="inline-flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 px-5 py-4 transition-colors hover:border-neutral-600"
+            >
+              <div>
+                <span className="block font-semibold text-neutral-100">
+                  Human Members
+                </span>
+                <span className="block text-xs text-neutral-500">
+                  View the team, manage roles, and invite people
+                </span>
+              </div>
+              <span className="ml-2 text-neutral-500">→</span>
+            </Link>
+          </div>
+
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {COMING_SOON.map((section) => (
               <div
                 key={section.title}

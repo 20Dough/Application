@@ -22,3 +22,17 @@ export function errorResponse(error: unknown): NextResponse {
     { status: 500 }
   );
 }
+
+// Pragmatic email check — good enough to reject obvious typos without trying to
+// fully validate RFC 5322. Real verification happens when email delivery lands.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Normalizes an email to a trimmed, lower-cased string. */
+export function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+/** True if the value looks like a valid email address. */
+export function isValidEmail(value: unknown): value is string {
+  return typeof value === "string" && EMAIL_RE.test(value.trim());
+}
