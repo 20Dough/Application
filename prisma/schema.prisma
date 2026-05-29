@@ -1,0 +1,40 @@
+// HiveMind — Phase 1 Foundation schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// AI providers participating in the hive (e.g. ARi = OpenAI, Cloudy = Anthropic)
+model Provider {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  kind      String // "openai" | "anthropic"
+  model     String
+  createdAt DateTime  @default(now())
+  messages  Message[]
+}
+
+// A conversation thread within the hive
+model Conversation {
+  id        String    @id @default(cuid())
+  title     String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  messages  Message[]
+}
+
+// A single message authored by a user or a provider
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String // "user" | "assistant" | "system"
+  content        String
+  providerId     String?
+  provider       Provider?    @relation(fields: [providerId], references: [id])
+  createdAt      DateTime     @default(now())
+}
