@@ -18,7 +18,6 @@ type WorkspaceDetail = {
 };
 
 const COMING_SOON: { title: string; note: string }[] = [
-  { title: "Memory", note: "Coming later" },
   { title: "Decisions", note: "Coming later" },
 ];
 
@@ -130,6 +129,20 @@ export default function WorkspacePage({
                 </span>
                 <span className="block text-xs text-neutral-500">
                   Focused spaces for humans and AI agents to work together
+                </span>
+              </div>
+              <span className="ml-auto text-neutral-500">→</span>
+            </Link>
+            <Link
+              href={`/workspace/${workspaceId}/memory`}
+              className="inline-flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 px-5 py-4 transition-colors hover:border-neutral-600"
+            >
+              <div>
+                <span className="block font-semibold text-neutral-100">
+                  Memory & Context
+                </span>
+                <span className="block text-xs text-neutral-500">
+                  Project context and shared memory the AI team reasons over
                 </span>
               </div>
               <span className="ml-auto text-neutral-500">→</span>
