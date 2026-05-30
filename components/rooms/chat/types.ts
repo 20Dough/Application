@@ -26,7 +26,26 @@ export type ChatMessage = {
   roomId: string;
   senderType: MessageSenderType;
   content: string;
+  // JSON string set by the AI Router (mentions on human messages; provider/model
+  // and provenance on agent messages). Parsed lazily by the UI when present.
+  metadata: string | null;
   createdAt: string;
   user: MessageUser | null;
   agent: MessageAgent | null;
 };
+
+/** Shape of the agent-message metadata the UI reads (all fields optional). */
+export type AgentMessageMetadata = {
+  provider?: string;
+  model?: string;
+};
+
+/** Safely parses message metadata; returns null on missing/invalid JSON. */
+export function parseMetadata(metadata: string | null): AgentMessageMetadata | null {
+  if (!metadata) return null;
+  try {
+    return JSON.parse(metadata) as AgentMessageMetadata;
+  } catch {
+    return null;
+  }
+}

@@ -3,7 +3,8 @@ import {
   avatarInitials,
   isImageAvatar,
 } from "@/lib/agents/profile";
-import type { ChatMessage } from "./types";
+import { modelLabel, providerLabel } from "@/lib/agents/registry";
+import { parseMetadata, type ChatMessage } from "./types";
 
 // MessageItem — renders a single chat message: the sender's avatar and name, a
 // timestamp, and the message body. Three sender kinds are supported:
@@ -101,6 +102,13 @@ export function MessageItem({
     ? message.agent?.avatarUrl ?? null
     : message.user?.avatarUrl ?? null;
 
+  // For AI messages, surface the provider/model the response came from.
+  const meta = isAgent ? parseMetadata(message.metadata) : null;
+  const modelText =
+    meta?.provider && meta?.model
+      ? `${providerLabel(meta.provider)} · ${modelLabel(meta.provider, meta.model)}`
+      : null;
+
   return (
     <li className="flex gap-3">
       <SenderAvatar name={name} avatarUrl={avatarUrl} />
@@ -125,6 +133,11 @@ export function MessageItem({
           >
             {formatTime(message.createdAt)}
           </span>
+          {modelText && (
+            <span className="shrink-0 truncate text-[10px] text-neutral-600">
+              {modelText}
+            </span>
+          )}
         </div>
         <p className="whitespace-pre-wrap break-words text-sm text-neutral-300">
           {message.content}

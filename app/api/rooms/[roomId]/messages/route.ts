@@ -8,6 +8,7 @@ import {
 } from "@/lib/permissions";
 import { errorResponse } from "@/lib/api";
 import { validateMessageCreate } from "@/lib/messages/validation";
+import { routeHumanMessage } from "@/lib/ai/ai-router";
 
 type RouteContext = { params: Promise<{ roomId: string }> };
 
@@ -72,9 +73,10 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
 }
 
 // POST /api/rooms/[roomId]/messages
-// Posts a human message to the room. Any member who can send (owner/admin/
-// member) may post; viewers are read-only. Only human messages are created in
-// this phase — there are no AI responses yet.
+// Posts a human message to the room, then runs the AI Router: any @mentioned
+// (or default/fallback) agents respond in the same room. Any member who can send
+// (owner/admin/member) may post; viewers are read-only. The response returns the
+// human message plus the AI replies (and any system notices), oldest → newest.
 export async function POST(request: NextRequest, { params }: RouteContext) {
   try {
     const user = await requireUser();
@@ -109,7 +111,11 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       },
     });
 
-    return NextResponse.json({ message }, { status: 201 });
+    // Hand the saved message to the AI Router. Mentioned (or default/fallback)
+    // agents respond in-room; a provider failing never fails the human message.
+    const replies = await routeHumanMessage(room, message);
+
+    return NextResponse.json({ message, replies }, { status: 201 });
   } catch (error) {
     return errorResponse(error);
   }
