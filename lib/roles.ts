@@ -86,6 +86,24 @@ export function canSendMessages(role: string): boolean {
 }
 
 /**
+ * Owners and admins curate shared memory and project context (create, edit,
+ * delete). Members and viewers can read both — memory and project context feed
+ * the AI context that every member's messages rely on — but cannot change them.
+ *
+ * Memory and project context share the same management bar; they are kept as
+ * separate helpers so the two can diverge later (e.g. members proposing memory)
+ * without touching call sites.
+ */
+export function canManageMemory(role: string): boolean {
+  return role === "owner" || role === "admin";
+}
+
+/** Owners and admins can manage a workspace's project context. See canManageMemory. */
+export function canManageProjectContext(role: string): boolean {
+  return role === "owner" || role === "admin";
+}
+
+/**
  * Decides whether an actor with `actorRole` may change the role of, or remove,
  * a member who currently holds `targetRole`.
  *

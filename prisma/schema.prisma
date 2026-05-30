@@ -172,7 +172,7 @@ model MemoryItem {
   roomId      String?
   title       String
   content     String
-  importance  Int      @default(0)
+  importance  Int      @default(1)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
