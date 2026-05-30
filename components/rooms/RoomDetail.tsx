@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { canManageRooms } from "@/lib/roles";
+import { useVisiblePolling } from "@/lib/hooks/use-visible-polling";
 import { AgentAvatar } from "@/components/agents/AgentAvatar";
 import { RoomChat } from "@/components/rooms/chat/RoomChat";
 
@@ -15,6 +16,10 @@ import { RoomChat } from "@/components/rooms/chat/RoomChat";
 // agent, remove an agent, and set/clear the default agent. The API enforces
 // every permission rule; this component mirrors the permission check only to
 // shape the UI.
+
+// How often the room re-fetches its participants (ms) so agent membership and
+// the default-agent choice stay current when teammates change them elsewhere.
+const PARTICIPANT_POLL_INTERVAL_MS = 8000;
 
 type RoomAgent = {
   id: string;
@@ -103,6 +108,27 @@ export function RoomDetail({
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  // Lightweight realtime refresh of participants: updates the room, its agents,
+  // and members in place. Transient failures are ignored (the next tick
+  // retries) so polling never replaces a working view with an error and never
+  // toggles the initial loading state.
+  const pollRoom = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/rooms/${roomId}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setRoom(data.room);
+      setMembers(data.members ?? []);
+      setAgents(data.agents ?? []);
+      setAvailableAgents(data.availableAgents ?? []);
+      setRole(data.role ?? "viewer");
+    } catch {
+      /* transient — retry on the next tick */
+    }
+  }, [roomId]);
+
+  useVisiblePolling(pollRoom, PARTICIPANT_POLL_INTERVAL_MS);
 
   async function runAction(id: string, fn: () => Promise<Response>) {
     setBusyId(id);

@@ -38,7 +38,14 @@ const MESSAGE_LIMIT = 200;
 // authors. Any workspace member may read. The current user's role and id are
 // returned so the UI can gate the composer (viewers are read-only) and mark the
 // viewer's own messages.
-export async function GET(_request: NextRequest, { params }: RouteContext) {
+//
+// Optional `?after=<ISO timestamp>` enables an incremental fetch: only messages
+// at or after that instant are returned. This powers the chat's realtime polling
+// so each refresh transfers just the new messages instead of the whole
+// transcript. The bound is inclusive (and the client de-duplicates by id) so a
+// message sharing the cursor's millisecond is never silently skipped. An
+// invalid `after` is ignored and the full recent slice is returned.
+export async function GET(request: NextRequest, { params }: RouteContext) {
   try {
     const user = await requireUser();
     const { roomId } = await params;
@@ -50,17 +57,35 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
 
     const membership = await requireWorkspaceMember(user.id, room.workspaceId);
 
-    // Take the most recent slice, then present oldest → newest for display.
-    const recent = await db.message.findMany({
-      where: { roomId },
-      orderBy: { createdAt: "desc" },
-      take: MESSAGE_LIMIT,
-      include: {
-        user: { select: USER_SELECT },
-        agent: { select: AGENT_SELECT },
-      },
-    });
-    const messages = recent.reverse();
+    const afterParam = request.nextUrl.searchParams.get("after");
+    const after = afterParam ? new Date(afterParam) : null;
+    const hasAfter = after !== null && !Number.isNaN(after.getTime());
+
+    let messages;
+    if (hasAfter) {
+      // Incremental: just the new messages, already oldest → newest.
+      messages = await db.message.findMany({
+        where: { roomId, createdAt: { gte: after } },
+        orderBy: { createdAt: "asc" },
+        take: MESSAGE_LIMIT,
+        include: {
+          user: { select: USER_SELECT },
+          agent: { select: AGENT_SELECT },
+        },
+      });
+    } else {
+      // Take the most recent slice, then present oldest → newest for display.
+      const recent = await db.message.findMany({
+        where: { roomId },
+        orderBy: { createdAt: "desc" },
+        take: MESSAGE_LIMIT,
+        include: {
+          user: { select: USER_SELECT },
+          agent: { select: AGENT_SELECT },
+        },
+      });
+      messages = recent.reverse();
+    }
 
     return NextResponse.json({
       messages,
