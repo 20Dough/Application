@@ -10,9 +10,9 @@ import type { ChatMessage } from "./types";
 //
 // Loads the room's messages, owns the composer, and posts new human messages.
 // All access and permission rules are enforced by the API; this component
-// mirrors the read-only check (viewers cannot send) only to shape the UI. AI
-// responses are not part of this phase, so sending only ever appends one human
-// message.
+// mirrors the read-only check (viewers cannot send) only to shape the UI.
+// Posting a message returns the human message plus any AI replies (and system
+// notices) from the AI Router; all are appended to the conversation in order.
 
 export function RoomChat({ roomId }: { roomId: string }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -61,9 +61,15 @@ export function RoomChat({ roomId }: { roomId: string }) {
         return;
       }
       const data = await res.json();
-      // Append the newly created message rather than refetching the whole list.
-      if (data.message) {
-        setMessages((prev) => [...prev, data.message as ChatMessage]);
+      // Append the human message and any AI replies / system notices the router
+      // produced, in order, rather than refetching the whole list.
+      const appended: ChatMessage[] = [];
+      if (data.message) appended.push(data.message as ChatMessage);
+      if (Array.isArray(data.replies)) {
+        appended.push(...(data.replies as ChatMessage[]));
+      }
+      if (appended.length > 0) {
+        setMessages((prev) => [...prev, ...appended]);
       }
     },
     [roomId]
