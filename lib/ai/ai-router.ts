@@ -10,6 +10,10 @@ import {
   buildAgentContext,
   type ContextMessage,
 } from "@/lib/memory/context-builder";
+import {
+  coerceDecisionFields,
+  type DecisionFields,
+} from "@/lib/decisions/validation";
 
 // AI Router — the single place AI orchestration happens. The API route owns
 // authentication, permission checks, and persisting the human message; the
@@ -335,4 +339,186 @@ function toSelectable(agent: {
     systemPrompt: agent.systemPrompt,
     isActive: agent.isActive,
   };
+}
+
+// ===========================================================================
+// Decision summaries
+// ===========================================================================
+//
+// Generating a decision summary reuses the same AI orchestration the chat loop
+// uses — select an agent, build context, call its provider through the factory,
+// degrade gracefully — but produces a structured Decision instead of a chat
+// reply. The API route owns auth/permissions and persists the returned draft.
+
+// How many of the room's most recent messages feed the summary.
+const SUMMARY_MESSAGE_LIMIT = 30;
+
+/** A generated, not-yet-persisted decision plus its provenance. */
+export type DecisionSummaryDraft = DecisionFields & {
+  agentId: string;
+  provider: string;
+  model: string;
+};
+
+/**
+ * Raised when a decision summary can't be produced for an expected reason the
+ * caller should see (no messages yet, no agent available, the provider failed).
+ * The route maps this to a 4xx with the message; unexpected errors stay 500.
+ */
+export class DecisionSummaryError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DecisionSummaryError";
+  }
+}
+
+/**
+ * Generates a decision summary from a room's recent messages. Picks the author
+ * agent (explicit → room default → first active workspace agent), builds a
+ * summarization prompt from the transcript, and calls that agent's provider.
+ * Returns a bounded draft; the caller persists it. Throws DecisionSummaryError
+ * for user-facing failures and logs raw provider errors server-side only.
+ */
+export async function generateDecisionSummary(
+  room: Room,
+  options: { agentId?: string | null } = {}
+): Promise<DecisionSummaryDraft> {
+  const messages = await loadContextMessages(room.id);
+  const conversation = messages.filter((m) => m.senderType !== "system");
+  if (conversation.length === 0) {
+    throw new DecisionSummaryError(
+      "There are no messages in this room to summarize yet."
+    );
+  }
+
+  const agent = await selectSummaryAgent(room, options.agentId ?? null);
+
+  const transcript = conversation
+    .slice(-SUMMARY_MESSAGE_LIMIT)
+    .map((m) => `${summarySpeaker(m)}: ${m.content}`)
+    .join("\n");
+
+  let content: string;
+  try {
+    const provider = getProvider(agent.provider);
+    const result = await provider.generateResponse({
+      model: agent.model,
+      systemPrompt: buildDecisionPrompt(agent.displayName, room.name),
+      messages: [{ role: "user", content: transcript }],
+    });
+    content = result.content.trim();
+    if (!content) {
+      throw new Error("Provider returned an empty summary");
+    }
+  } catch (error) {
+    console.error(
+      `[ai-router] decision summary via ${agent.displayName} (${agent.provider}/${agent.model}) failed:`,
+      error
+    );
+    throw new DecisionSummaryError(
+      "The AI teammate could not generate a summary right now. Please try again."
+    );
+  }
+
+  const fields = parseDecisionContent(content);
+  return { ...fields, agentId: agent.id, provider: agent.provider, model: agent.model };
+}
+
+// Picks the agent that authors the summary. An explicit agentId must be an
+// active agent in this workspace; otherwise the room's default agent is used,
+// falling back to the first active workspace agent.
+async function selectSummaryAgent(
+  room: Room,
+  requestedAgentId: string | null
+): Promise<SelectableAgent> {
+  if (requestedAgentId) {
+    const agent = await db.agent.findFirst({
+      where: { id: requestedAgentId, workspaceId: room.workspaceId },
+    });
+    if (!agent) {
+      throw new DecisionSummaryError("That agent is not part of this workspace.");
+    }
+    if (!agent.isActive) {
+      throw new DecisionSummaryError(`${agent.displayName} is inactive.`);
+    }
+    return toSelectable(agent);
+  }
+
+  if (room.defaultAgentId) {
+    const fallback = await db.agent.findFirst({
+      where: { id: room.defaultAgentId, workspaceId: room.workspaceId, isActive: true },
+    });
+    if (fallback) return toSelectable(fallback);
+  }
+
+  const anyActive = await db.agent.findFirst({
+    where: { workspaceId: room.workspaceId, isActive: true },
+    orderBy: { createdAt: "asc" },
+  });
+  if (!anyActive) {
+    throw new DecisionSummaryError(
+      "No active AI teammate is available to generate a summary."
+    );
+  }
+  return toSelectable(anyActive);
+}
+
+function buildDecisionPrompt(agentName: string, roomName: string): string {
+  return (
+    `You are ${agentName}, an AI teammate in HiveMind. Read the recent ` +
+    `conversation from the room "${roomName}" and produce a concise DECISION ` +
+    `SUMMARY: the key decision(s) the team reached or converged on, plus the ` +
+    `concrete next steps.\n\n` +
+    `Respond with ONLY a JSON object of this exact shape:\n` +
+    `{"title": "...", "summary": "...", "actionItems": ["...", "..."]}\n\n` +
+    `- title: a short headline naming the decision or topic.\n` +
+    `- summary: 1-3 sentences on what was decided and why.\n` +
+    `- actionItems: array of short next-step strings (use [] if there are none).\n` +
+    `Do not include any prose, markdown, or text outside the JSON object.`
+  );
+}
+
+// Parses the provider output into bounded decision fields. Prefers a JSON object
+// (optionally fenced); when the model — or the dev stub — returns plain text, it
+// falls back to using that text as the summary so a Decision is still produced.
+function parseDecisionContent(content: string): DecisionFields {
+  const json = extractJsonObject(content);
+  if (json) {
+    return coerceDecisionFields({
+      title: json.title,
+      summary: json.summary,
+      actionItems: json.actionItems,
+    });
+  }
+  // Plain-text fallback: first line becomes the title, the whole reply the summary.
+  const firstLine = content.split("\n").map((l) => l.trim()).find(Boolean);
+  return coerceDecisionFields({
+    title: firstLine,
+    summary: content,
+    actionItems: [],
+  });
+}
+
+function extractJsonObject(content: string): Record<string, unknown> | null {
+  // Strip a ```json … ``` (or plain ``` … ```) fence if present.
+  const unfenced = content
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+  const start = unfenced.indexOf("{");
+  const end = unfenced.lastIndexOf("}");
+  if (start === -1 || end <= start) return null;
+  try {
+    const parsed = JSON.parse(unfenced.slice(start, end + 1));
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
+function summarySpeaker(message: ContextMessage): string {
+  if (message.senderType === "agent") {
+    return message.agent?.displayName ?? "Agent";
+  }
+  return message.user?.name || message.user?.email || "Someone";
 }

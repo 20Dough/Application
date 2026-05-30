@@ -104,6 +104,16 @@ export function canManageProjectContext(role: string): boolean {
 }
 
 /**
+ * Owners, admins, and members can generate decision summaries from a room's
+ * recent messages. Viewers are read-only: they can read decisions but cannot
+ * trigger AI generation (which spends provider usage). Mirrors canSendMessages
+ * since both are participation actions, but kept separate so they can diverge.
+ */
+export function canGenerateSummaries(role: string): boolean {
+  return role === "owner" || role === "admin" || role === "member";
+}
+
+/**
  * Decides whether an actor with `actorRole` may change the role of, or remove,
  * a member who currently holds `targetRole`.
  *

@@ -6,9 +6,10 @@ import { AppShell } from "@/components/layout/AppShell";
 
 // Workspace detail page.
 //
-// Shows name, description, and the current user's role, plus placeholder
-// sections for features arriving in later phases. Access is gated by the API
-// (membership required); a 403/404 is surfaced as a friendly message.
+// Shows name, description, and the current user's role, plus links into the
+// workspace's features (members, agents, rooms, memory, decisions). Access is
+// gated by the API (membership required); a 403/404 is surfaced as a friendly
+// message.
 
 type WorkspaceDetail = {
   id: string;
@@ -16,10 +17,6 @@ type WorkspaceDetail = {
   description?: string | null;
   role: string;
 };
-
-const COMING_SOON: { title: string; note: string }[] = [
-  { title: "Decisions", note: "Coming later" },
-];
 
 export default function WorkspacePage({
   params,
@@ -147,20 +144,21 @@ export default function WorkspacePage({
               </div>
               <span className="ml-auto text-neutral-500">→</span>
             </Link>
-          </div>
-
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {COMING_SOON.map((section) => (
-              <div
-                key={section.title}
-                className="rounded-lg border border-dashed border-neutral-800 p-5"
-              >
-                <h2 className="font-semibold text-neutral-300">
-                  {section.title}
-                </h2>
-                <p className="mt-1 text-xs text-neutral-600">{section.note}</p>
+            <Link
+              href={`/workspace/${workspaceId}/decisions`}
+              className="inline-flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 px-5 py-4 transition-colors hover:border-neutral-600"
+            >
+              <div>
+                <span className="block font-semibold text-neutral-100">
+                  Decisions
+                </span>
+                <span className="block text-xs text-neutral-500">
+                  AI-generated summaries of what the team decided, with next
+                  steps
+                </span>
               </div>
-            ))}
+              <span className="ml-auto text-neutral-500">→</span>
+            </Link>
           </div>
         </div>
       ) : null}
