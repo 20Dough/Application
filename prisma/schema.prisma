@@ -9,7 +9,8 @@
 // management; Phase 4 activates the AI agent foundation (Agent / RoomAgent —
 // agent registry, profiles, and per-workspace default agents). The remaining
 // models (rooms, memory, decisions) are defined here so later phases build on a
-// stable schema without repeated migrations.
+// stable schema without repeated migrations. Phase 11 adds the knowledge base
+// (KnowledgeSource / KnowledgeChunk) for retrieval-augmented agent context.
 
 generator client {
   provider = "prisma-client-js"
@@ -44,15 +45,17 @@ model Workspace {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  owner           User             @relation("WorkspaceOwner", fields: [ownerId], references: [id])
-  members         WorkspaceMember[]
-  invitations     Invitation[]
-  rooms           Room[]
-  agents          Agent[]
-  memoryItems     MemoryItem[]
-  projectContexts ProjectContext[]
-  decisions       Decision[]
-  usageLogs       UsageLog[]
+  owner            User              @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+  members          WorkspaceMember[]
+  invitations      Invitation[]
+  rooms            Room[]
+  agents           Agent[]
+  memoryItems      MemoryItem[]
+  projectContexts  ProjectContext[]
+  decisions        Decision[]
+  knowledgeSources KnowledgeSource[]
+  knowledgeChunks  KnowledgeChunk[]
+  usageLogs        UsageLog[]
 
   @@index([ownerId])
 }
@@ -98,12 +101,14 @@ model Room {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  workspace    Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  defaultAgent Agent?       @relation("RoomDefaultAgent", fields: [defaultAgentId], references: [id], onDelete: SetNull)
-  messages     Message[]
-  roomAgents   RoomAgent[]
-  memoryItems  MemoryItem[]
-  decisions    Decision[]
+  workspace        Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  defaultAgent     Agent?            @relation("RoomDefaultAgent", fields: [defaultAgentId], references: [id], onDelete: SetNull)
+  messages         Message[]
+  roomAgents       RoomAgent[]
+  memoryItems      MemoryItem[]
+  decisions        Decision[]
+  knowledgeSources KnowledgeSource[]
+  knowledgeChunks  KnowledgeChunk[]
 
   @@index([workspaceId])
 }
@@ -211,6 +216,62 @@ model Decision {
   room      Room?     @relation(fields: [roomId], references: [id], onDelete: SetNull)
 
   @@index([workspaceId])
+}
+
+// A unit of ingested knowledge (Phase 11 — Knowledge & RAG). A source is a
+// document or block of text added to a workspace's knowledge base; on ingestion
+// it is split into KnowledgeChunks and embedded so the AI Router can retrieve the
+// most relevant passages and inject them into an agent's context. Knowledge may
+// be workspace-wide (roomId null) or scoped to a single room.
+//
+// sourceType: "text" | "document"
+// status:     "ready" | "failed"  (ingestion is synchronous in the MVP)
+model KnowledgeSource {
+  id          String   @id @default(cuid())
+  workspaceId String
+  roomId      String?
+  title       String
+  sourceType  String   @default("text")
+  status      String   @default("ready")
+  charCount   Int      @default(0)
+  chunkCount  Int      @default(0)
+  error       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  room      Room?            @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  chunks    KnowledgeChunk[]
+
+  @@index([workspaceId])
+  @@index([roomId])
+}
+
+// One embedded chunk of a KnowledgeSource. workspaceId/roomId are denormalized
+// from the parent source so retrieval can filter by scope without a join. The
+// embedding is stored as a JSON array of floats; SQLite has no native vector
+// type, so cosine similarity is computed in-process for the MVP. dimensions and
+// embeddingModel are recorded so retrieval can skip chunks embedded with a
+// different model/dimension than the live query embedding.
+model KnowledgeChunk {
+  id             String   @id @default(cuid())
+  sourceId       String
+  workspaceId    String
+  roomId         String?
+  chunkIndex     Int
+  content        String
+  embedding      String
+  embeddingModel String
+  dimensions     Int
+  createdAt      DateTime @default(now())
+
+  source    KnowledgeSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  room      Room?           @relation(fields: [roomId], references: [id], onDelete: SetNull)
+
+  @@index([sourceId])
+  @@index([workspaceId])
+  @@index([roomId])
 }
 
 // Tracks AI usage for cost/auditing.

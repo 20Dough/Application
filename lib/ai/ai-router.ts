@@ -14,6 +14,8 @@ import {
   coerceDecisionFields,
   type DecisionFields,
 } from "@/lib/decisions/validation";
+import { retrieveKnowledge } from "@/lib/knowledge/retrieval";
+import type { RetrievedKnowledge } from "@/lib/memory/context-builder";
 
 // AI Router — the single place AI orchestration happens. The API route owns
 // authentication, permission checks, and persisting the human message; the
@@ -113,7 +115,9 @@ export async function routeHumanMessage(
 
   // --- Build shared context inputs, then call each provider --------------
   const contextMessages = await loadContextMessages(room.id);
-  const sharedSources = await loadSharedSources(room);
+  // Knowledge is retrieved once for the triggering message and shared by every
+  // selected agent (they answer the same message in the same scope).
+  const sharedSources = await loadSharedSources(room, humanMessage.content);
 
   for (const agent of selected) {
     const reply = await generateAgentReply(
@@ -147,6 +151,7 @@ async function generateAgentReply(
       projectContexts: shared.projectContexts,
       memoryItems: shared.memoryItems,
       decisions: shared.decisions,
+      knowledge: shared.knowledge,
       messages: contextMessages,
     });
 
@@ -272,10 +277,14 @@ type SharedSources = {
   projectContexts: Array<{ title: string; content: string }>;
   memoryItems: Array<{ title: string; content: string; importance: number }>;
   decisions: Array<{ title: string; summary: string }>;
+  knowledge: RetrievedKnowledge[];
 };
 
-async function loadSharedSources(room: Room): Promise<SharedSources> {
-  const [workspace, projectContexts, memoryItems, decisions] = await Promise.all([
+async function loadSharedSources(
+  room: Room,
+  query: string
+): Promise<SharedSources> {
+  const [workspace, projectContexts, memoryItems, decisions, knowledge] = await Promise.all([
     db.workspace.findUniqueOrThrow({
       where: { id: room.workspaceId },
       select: { name: true, description: true },
@@ -301,8 +310,30 @@ async function loadSharedSources(room: Room): Promise<SharedSources> {
       select: { title: true, summary: true },
       orderBy: { createdAt: "desc" },
     }),
+    loadRelevantKnowledge(room, query),
   ]);
-  return { workspace, projectContexts, memoryItems, decisions };
+  return { workspace, projectContexts, memoryItems, decisions, knowledge };
+}
+
+// Retrieves knowledge passages relevant to the triggering message, scoped to the
+// room (workspace-wide + this room's sources). Retrieval is best-effort: an
+// embedding/db hiccup must never block the AI replies, so failures degrade to
+// "no knowledge" and are logged server-side only.
+async function loadRelevantKnowledge(
+  room: Room,
+  query: string
+): Promise<RetrievedKnowledge[]> {
+  try {
+    const chunks = await retrieveKnowledge({
+      workspaceId: room.workspaceId,
+      roomId: room.id,
+      query,
+    });
+    return chunks.map((c) => ({ sourceTitle: c.sourceTitle, content: c.content }));
+  } catch (error) {
+    console.error("[ai-router] knowledge retrieval failed:", error);
+    return [];
+  }
 }
 
 async function loadContextMessages(roomId: string): Promise<ContextMessage[]> {
