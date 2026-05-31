@@ -31,16 +31,20 @@ Severity: 🔴 high · 🟡 medium · 🟢 low / housekeeping
 
 ## Tests & stability
 
-- 🔴 **Flaky Phase 7 runtime test / messages route.** `phase7-runtime-test.mjs`
-  usually reports 30/30 but intermittently (~1 in 3 runs observed) fails 1–4
-  checks in the "provider failure → graceful system message" scenario, with the
-  server logging `SyntaxError: Unexpected end of JSON input` and returning **500**
-  from `POST /api/rooms/[roomId]/messages`. The human message + working agent
-  reply path should never 500. Reproduce by running the test repeatedly against
-  a `npm run dev` server. Investigate the request/parse path on the messages
-  route under the mixed working-agent + placeholder-agent (`gemini`) case and the
-  test's request sequencing/concurrency. Track down the unguarded JSON parse and
-  ensure the route always degrades to 201 + a "could not respond" notice.
+- ✅ **(RESOLVED in PR #11) Flaky Phase 7 runtime test / messages route.**
+  `phase7-runtime-test.mjs` used to report 30/30 but intermittently (~1 in 3
+  runs observed) failed 1–4 checks in the "provider failure → graceful system
+  message" scenario, with the server logging `SyntaxError: Unexpected end of
+  JSON input` and returning **500** from `POST /api/rooms/[roomId]/messages`.
+  Root cause turned out **not** to be an unguarded app-code `JSON.parse`: the
+  in-tree SQLite files (`prisma/dev.db` + `-journal`/`-wal`/`-shm`) tripped the
+  Next dev webpack watcher on every message write, and a request landing
+  mid-recompile read a half-written build manifest and 500'd — a dev-only
+  artifact (`next build`/`next start` have no watcher). PR #11 excludes those
+  files from the dev watcher and, as a belt-and-braces guarantee, wraps
+  `routeHumanMessage` in an outer safety net so the AI routing/provider path
+  degrades to 201 instead of 500 on any unexpected throw. Phase 7 now runs
+  35/35 then 30/30 stable with 0 `/messages` 500s. No further action needed.
 - 🟡 **No test runner / npm script for the suite.** Runtime tests are loose
   `scripts/phaseN-runtime-test.mjs` files run by hand, each needing a running dev
   server and a fresh DB. Add an `npm run test:e2e` (or similar) that boots a dev
@@ -77,7 +81,9 @@ listed here so they are tracked in one place:
 ## Out of scope for this phase (per the cleanup brief)
 
 - No new product features.
-- No changes to AI behavior. _(The Phase 7 flake above is filed as a task to
-  investigate, not fixed here, since the fix touches the AI routing path.)_
+- No changes to AI behavior. _(The Phase 7 flake above was investigated and
+  resolved separately in PR #11 — a dev-watcher/manifest race plus a
+  behaviour-preserving graceful-degradation safety net, not an AI-behaviour
+  change.)_
 - No large architecture refactors.
 - No production deployment.

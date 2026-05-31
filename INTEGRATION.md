@@ -5,7 +5,8 @@ integrated application** after Phases 1–12, how the phase branches relate to o
 another, and how to run and verify the app. It exists to remove the "which
 branch is the source of truth?" confusion that built up during the phased MVP.
 
-_Last verified: 2026-05-31, from the latest merged head (Phase 12)._
+_Last verified: 2026-05-31, from the latest merged head (Phase 12, plus the
+Phase 7 flaky-500 fix merged via PR #11)._
 
 ## TL;DR
 
@@ -34,7 +35,9 @@ e0324c9  Phase 8  project context + shared memory
 290ebe2  Phase 10 realtime room updates
 72af054  Phase 11 knowledge base + RAG
 ad084c5  Phase 12 multi-agent discussion
-ead6e9f  Merge PR #9 (Phase 12)  ← current integration head
+ead6e9f  Merge PR #9 (Phase 12)
+ae79762  Fix Phase 7 flaky 500 on POST /rooms/[roomId]/messages
+aaf6e1d  Merge PR #11 (Phase 7 flaky-500 fix)  ← current integration head
 ```
 
 All merged phase PRs (#4–#9) used `claude/phase-7-pr-1qlYo` as their base, which
@@ -94,7 +97,7 @@ Run from the integration head:
   | 4 | 32 / 32 ✅ |
   | 5 | 42 / 42 ✅ |
   | 6 | 32 / 32 ✅ |
-  | 7 | 30 / 30 ✅ **(flaky — see Cleanup Tasks)** |
+  | 7 | 30 / 30 ✅ **(flake fixed in PR #11 — now 35/35 stable)** |
   | 8 | 54 / 54 ✅ |
   | 9 | 33 / 33 ✅ |
   | 10 | 27 / 27 ✅ |
