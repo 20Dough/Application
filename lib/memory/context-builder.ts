@@ -9,20 +9,31 @@ import type { ProviderInput, ProviderMessage } from "@/lib/ai/types";
 //   4. Room info
 //   5. Important MemoryItems
 //   6. Recent Decisions
-//   7. Recent messages       (bounded — never the full history)
-//   8. Current message       (the latest entry in the recent messages)
+//   7. Relevant Knowledge    (Phase 11 — retrieved passages for this message)
+//   8. Recent messages       (bounded — never the full history)
+//   9. Current message       (the latest entry in the recent messages)
 //
-// Static, curated context (1–6) goes into the system prompt; the recent
-// conversation (7–8) is passed as the chat transcript so providers see who said
-// what. The current human message is simply the last recent message.
+// Static, curated context (1–6) plus the dynamically retrieved knowledge (7) go
+// into the system prompt; the recent conversation (8–9) is passed as the chat
+// transcript so providers see who said what. The current human message is simply
+// the last recent message. Knowledge comes after curated memory/decisions but
+// before the live transcript: it is supporting reference material, not the
+// team's own stated facts, so it must not outrank ProjectContext or memory.
 
 // Never send unlimited history; the MVP uses the latest N messages.
 const RECENT_MESSAGE_LIMIT = 30;
 // Bound the curated context so prompts stay focused and costs predictable.
 const MEMORY_LIMIT = 10;
 const DECISION_LIMIT = 5;
+const KNOWLEDGE_LIMIT = 6;
 
 type NamedContent = { title: string; content: string };
+
+/** A knowledge passage retrieved for the current message. */
+export type RetrievedKnowledge = {
+  sourceTitle: string;
+  content: string;
+};
 
 /** Minimal agent identity the builder needs. */
 export type ContextAgent = {
@@ -46,6 +57,8 @@ export type ContextSources = {
   projectContexts: NamedContent[];
   memoryItems: Array<NamedContent & { importance: number }>;
   decisions: Array<{ title: string; summary: string }>;
+  /** Knowledge passages retrieved for the current message (Phase 11). Optional. */
+  knowledge?: RetrievedKnowledge[];
   /** Recent room messages, oldest → newest (the current message is last). */
   messages: ContextMessage[];
 };
@@ -106,6 +119,23 @@ function buildSystemPrompt(sources: ContextSources): string {
       heading(
         "Recent Decisions",
         decisions.map((d) => `- ${d.title}: ${d.summary}`).join("\n")
+      )
+    );
+  }
+
+  // Retrieved knowledge — supporting reference passages for this message. Placed
+  // after the team's curated context and clearly framed as reference material so
+  // the agent treats it as background, not as the team's own decisions/memory.
+  const knowledge = (sources.knowledge ?? []).slice(0, KNOWLEDGE_LIMIT);
+  if (knowledge.length > 0) {
+    sections.push(
+      heading(
+        "Relevant Knowledge",
+        "Reference passages retrieved from the workspace knowledge base. Use them " +
+          "to inform your answer when relevant; cite the source title when you do.\n\n" +
+          knowledge
+            .map((k) => `[${k.sourceTitle}]\n${k.content}`)
+            .join("\n\n")
       )
     );
   }

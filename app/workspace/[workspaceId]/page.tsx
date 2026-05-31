@@ -145,6 +145,21 @@ export default function WorkspacePage({
               <span className="ml-auto text-neutral-500">→</span>
             </Link>
             <Link
+              href={`/workspace/${workspaceId}/knowledge`}
+              className="inline-flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 px-5 py-4 transition-colors hover:border-neutral-600"
+            >
+              <div>
+                <span className="block font-semibold text-neutral-100">
+                  Knowledge
+                </span>
+                <span className="block text-xs text-neutral-500">
+                  Documents and text your AI teammates retrieve from when
+                  answering
+                </span>
+              </div>
+              <span className="ml-auto text-neutral-500">→</span>
+            </Link>
+            <Link
               href={`/workspace/${workspaceId}/decisions`}
               className="inline-flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 px-5 py-4 transition-colors hover:border-neutral-600"
             >

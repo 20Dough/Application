@@ -104,6 +104,16 @@ export function canManageProjectContext(role: string): boolean {
 }
 
 /**
+ * Owners and admins curate the workspace's knowledge base (add and remove
+ * sources, edit their metadata). Members and viewers can read knowledge — it
+ * feeds the AI context their own messages rely on — but cannot change it.
+ * Mirrors canManageMemory; kept separate so the two can diverge later.
+ */
+export function canManageKnowledge(role: string): boolean {
+  return role === "owner" || role === "admin";
+}
+
+/**
  * Owners, admins, and members can generate decision summaries from a room's
  * recent messages. Viewers are read-only: they can read decisions but cannot
  * trigger AI generation (which spends provider usage). Mirrors canSendMessages
