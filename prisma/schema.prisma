@@ -55,6 +55,7 @@ model Workspace {
   decisions        Decision[]
   knowledgeSources KnowledgeSource[]
   knowledgeChunks  KnowledgeChunk[]
+  discussions      Discussion[]
   usageLogs        UsageLog[]
 
   @@index([ownerId])
@@ -109,6 +110,7 @@ model Room {
   decisions        Decision[]
   knowledgeSources KnowledgeSource[]
   knowledgeChunks  KnowledgeChunk[]
+  discussions      Discussion[]
 
   @@index([workspaceId])
 }
@@ -272,6 +274,61 @@ model KnowledgeChunk {
   @@index([sourceId])
   @@index([workspaceId])
   @@index([roomId])
+}
+
+// A multi-agent discussion (Phase 12 — Multi-Agent Discussion). Two or more AI
+// teammates discuss a topic over a bounded number of rounds; each contribution
+// is a DiscussionTurn. After the rounds a synthesizer agent produces a neutral
+// summary, the points of consensus, and the open disagreements. A discussion can
+// then yield a Decision (decisionId links to the generated Decision row).
+//
+// Discussion runs synchronously in the MVP (like knowledge ingestion), reusing
+// the AI Router's provider factory and the Context Builder for each turn.
+//
+// status:        "completed" | "failed"
+// consensus:     JSON string array of agreed points.
+// disagreements: JSON string array of { point, positions } objects.
+model Discussion {
+  id            String   @id @default(cuid())
+  workspaceId   String
+  roomId        String
+  topic         String
+  rounds        Int      @default(2)
+  status        String   @default("completed")
+  summary       String?
+  consensus     String?
+  disagreements String?
+  decisionId    String?
+  createdById   String?
+  error         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  workspace Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  room      Room             @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  turns     DiscussionTurn[]
+
+  @@index([workspaceId])
+  @@index([roomId])
+}
+
+// One agent's contribution in one round of a Discussion. agentId/agentName are
+// stored directly (not a relation) so a turn keeps its attribution even if the
+// agent is later renamed or removed — the discussion is an immutable record.
+model DiscussionTurn {
+  id           String   @id @default(cuid())
+  discussionId String
+  round        Int
+  agentId      String
+  agentName    String
+  content      String
+  provider     String
+  model        String
+  createdAt    DateTime @default(now())
+
+  discussion Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+
+  @@index([discussionId])
 }
 
 // Tracks AI usage for cost/auditing.
