@@ -124,6 +124,16 @@ export function canGenerateSummaries(role: string): boolean {
 }
 
 /**
+ * Owners, admins, and members can run multi-agent discussions and turn them into
+ * decisions. Viewers are read-only: they can read discussions but cannot trigger
+ * AI generation (which spends provider usage). Mirrors canGenerateSummaries —
+ * both are participation actions — but kept separate so they can diverge.
+ */
+export function canRunDiscussions(role: string): boolean {
+  return role === "owner" || role === "admin" || role === "member";
+}
+
+/**
  * Decides whether an actor with `actorRole` may change the role of, or remove,
  * a member who currently holds `targetRole`.
  *
