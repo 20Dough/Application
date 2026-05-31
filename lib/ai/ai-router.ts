@@ -71,66 +71,87 @@ export async function routeHumanMessage(
   room: Room,
   humanMessage: Message
 ): Promise<ReplyMessage[]> {
-  // --- Load the agents available in this room and the workspace ----------
-  const [roomAgentLinks, workspaceAgents] = await Promise.all([
-    db.roomAgent.findMany({
-      where: { roomId: room.id },
-      include: { agent: true },
-    }),
-    db.agent.findMany({ where: { workspaceId: room.workspaceId } }),
-  ]);
-
-  const roomAgents: SelectableAgent[] = roomAgentLinks.map((link) =>
-    toSelectable(link.agent)
-  );
-  const selectableWorkspaceAgents = workspaceAgents.map(toSelectable);
-
-  // --- Select which agents respond, plus any user-facing notices ---------
-  const { selected, notices } = selectRespondingAgents({
-    content: humanMessage.content,
-    roomAgents,
-    workspaceAgents: selectableWorkspaceAgents,
-    defaultAgentId: room.defaultAgentId,
-  });
-
-  // Record the mention metadata on the human message (resolved against all
-  // workspace agents so the record is accurate even for not-in-room mentions).
-  await recordMentionMetadata(humanMessage, selectableWorkspaceAgents);
-
-  // Nothing to do (and nothing to explain): pure human-to-human message.
-  if (selected.length === 0 && notices.length === 0) {
-    return [];
-  }
-
+  // Replies gathered so far. Hoisted so the safety net below can still return
+  // whatever was produced before an unexpected failure instead of losing it.
   const replies: ReplyMessage[] = [];
 
-  // Save explanatory notices first so they precede any fallback response.
-  for (const notice of notices) {
-    replies.push(await saveSystemMessage(room.id, notice, humanMessage.id));
-  }
+  // The human message is already persisted by the caller. The AI side must
+  // degrade gracefully and never throw past this point: an unexpected failure
+  // anywhere in the routing/provider path — a provider erroring, malformed or
+  // non-JSON provider output, a context-load hiccup — must not turn
+  // POST /api/rooms/[roomId]/messages into a 500. Per-agent provider failures
+  // are already handled in generateAgentReply; this outer guard covers the
+  // shared setup (agent loading, mention metadata, context/knowledge) and any
+  // unforeseen throw, so a malformed AI exchange never fails the human's post.
+  try {
+    // --- Load the agents available in this room and the workspace --------
+    const [roomAgentLinks, workspaceAgents] = await Promise.all([
+      db.roomAgent.findMany({
+        where: { roomId: room.id },
+        include: { agent: true },
+      }),
+      db.agent.findMany({ where: { workspaceId: room.workspaceId } }),
+    ]);
 
-  if (selected.length === 0) {
+    const roomAgents: SelectableAgent[] = roomAgentLinks.map((link) =>
+      toSelectable(link.agent)
+    );
+    const selectableWorkspaceAgents = workspaceAgents.map(toSelectable);
+
+    // --- Select which agents respond, plus any user-facing notices -------
+    const { selected, notices } = selectRespondingAgents({
+      content: humanMessage.content,
+      roomAgents,
+      workspaceAgents: selectableWorkspaceAgents,
+      defaultAgentId: room.defaultAgentId,
+    });
+
+    // Record the mention metadata on the human message (resolved against all
+    // workspace agents so the record is accurate even for not-in-room mentions).
+    await recordMentionMetadata(humanMessage, selectableWorkspaceAgents);
+
+    // Nothing to do (and nothing to explain): pure human-to-human message.
+    if (selected.length === 0 && notices.length === 0) {
+      return replies;
+    }
+
+    // Save explanatory notices first so they precede any fallback response.
+    for (const notice of notices) {
+      replies.push(await saveSystemMessage(room.id, notice, humanMessage.id));
+    }
+
+    if (selected.length === 0) {
+      return replies;
+    }
+
+    // --- Build shared context inputs, then call each provider ------------
+    const contextMessages = await loadContextMessages(room.id);
+    // Knowledge is retrieved once for the triggering message and shared by every
+    // selected agent (they answer the same message in the same scope).
+    const sharedSources = await loadSharedSources(room, humanMessage.content);
+
+    for (const agent of selected) {
+      const reply = await generateAgentReply(
+        room,
+        humanMessage,
+        agent,
+        contextMessages,
+        sharedSources
+      );
+      replies.push(reply);
+    }
+
+    return replies;
+  } catch (error) {
+    // Last-resort degradation: the human message stands; the AI side simply
+    // produced fewer (or no) replies this turn. Log the real error server-side
+    // only — never surface it to the client as a 500.
+    console.error(
+      "[ai-router] routeHumanMessage failed; degrading gracefully:",
+      error
+    );
     return replies;
   }
-
-  // --- Build shared context inputs, then call each provider --------------
-  const contextMessages = await loadContextMessages(room.id);
-  // Knowledge is retrieved once for the triggering message and shared by every
-  // selected agent (they answer the same message in the same scope).
-  const sharedSources = await loadSharedSources(room, humanMessage.content);
-
-  for (const agent of selected) {
-    const reply = await generateAgentReply(
-      room,
-      humanMessage,
-      agent,
-      contextMessages,
-      sharedSources
-    );
-    replies.push(reply);
-  }
-
-  return replies;
 }
 
 // --- One agent's turn ------------------------------------------------------
