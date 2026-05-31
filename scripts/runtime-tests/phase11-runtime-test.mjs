@@ -6,7 +6,7 @@
 // injection of retrieved knowledge into the AI Router's reply, and role
 // boundaries (member/viewer read-only, non-member denied).
 //
-// Run with: DATABASE_URL="file:./dev.db" node scripts/phase11-runtime-test.mjs
+// Run with: DATABASE_URL="file:./dev.db" node scripts/runtime-tests/phase11-runtime-test.mjs
 // (the dev server must be running; the script also talks to the DB directly for
 // the multi-user permission scenarios).
 

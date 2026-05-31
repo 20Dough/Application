@@ -11,7 +11,7 @@
 // two-agent minimum, and role-based permissions (viewer read-only, member may
 // run, non-member denied).
 //
-// Run with: DATABASE_URL="file:./dev.db" node scripts/phase12-runtime-test.mjs
+// Run with: DATABASE_URL="file:./dev.db" node scripts/runtime-tests/phase12-runtime-test.mjs
 // (the dev server must be running; the script also talks to the DB directly for
 // the multi-user permission scenarios).
 

@@ -14,7 +14,7 @@
 //     the same incremental fetch, so a polling client sees them
 //   - role / currentUserId are still reported, and access rules still hold
 //
-// Run with: DATABASE_URL="file:./dev.db" node scripts/phase10-runtime-test.mjs
+// Run with: DATABASE_URL="file:./dev.db" node scripts/runtime-tests/phase10-runtime-test.mjs
 // (the dev server must be running; the script also talks to the DB directly for
 // the multi-user permission scenario).
 

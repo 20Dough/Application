@@ -2,7 +2,7 @@
 // running dev server (http://localhost:3000) plus direct Prisma seeding for the
 // multi-user scenarios that the single fixed dev user cannot reach alone.
 //
-// Run with: node scripts/phase3-runtime-test.mjs   (dev server must be up)
+// Run with: node scripts/runtime-tests/phase3-runtime-test.mjs   (dev server must be up)
 
 import { PrismaClient } from "@prisma/client";
 

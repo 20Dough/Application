@@ -2,7 +2,7 @@
 // running dev server (http://localhost:3000) plus direct Prisma seeding for the
 // permission scenarios the single fixed dev user cannot reach alone.
 //
-// Run with: DATABASE_URL="file:./dev.db" node scripts/phase6-runtime-test.mjs
+// Run with: DATABASE_URL="file:./dev.db" node scripts/runtime-tests/phase6-runtime-test.mjs
 // (the dev server must be running; the script also talks to the DB directly for
 // the multi-user permission scenarios).
 
