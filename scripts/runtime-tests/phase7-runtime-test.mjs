@@ -6,7 +6,7 @@
 // fixed dev user / public API cannot reach (deactivating an agent, creating a
 // placeholder-provider agent to force the graceful-failure path).
 //
-// Run with: DATABASE_URL="file:./dev.db" node scripts/phase7-runtime-test.mjs
+// Run with: DATABASE_URL="file:./dev.db" node scripts/runtime-tests/phase7-runtime-test.mjs
 // (the dev server must be running).
 
 import { PrismaClient } from "@prisma/client";

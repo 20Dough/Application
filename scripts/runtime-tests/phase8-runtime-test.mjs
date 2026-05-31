@@ -4,7 +4,7 @@
 // reach alone. Also confirms the curated context still flows into the AI Router
 // (the collaboration loop keeps working with context/memory present).
 //
-// Run with: DATABASE_URL="file:./dev.db" node scripts/phase8-runtime-test.mjs
+// Run with: DATABASE_URL="file:./dev.db" node scripts/runtime-tests/phase8-runtime-test.mjs
 // (the dev server must be running; the script also talks to the DB directly for
 // the multi-user permission scenarios).
 

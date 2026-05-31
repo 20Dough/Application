@@ -8,7 +8,7 @@
 // (workspace-wide and room-filtered), validation, and role-based permissions
 // (viewers read-only, members may generate, non-members denied).
 //
-// Run with: DATABASE_URL="file:./dev.db" node scripts/phase9-runtime-test.mjs
+// Run with: DATABASE_URL="file:./dev.db" node scripts/runtime-tests/phase9-runtime-test.mjs
 // (the dev server must be running; the script also talks to the DB directly for
 // the multi-user permission scenarios).
 
