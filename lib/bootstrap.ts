@@ -49,6 +49,19 @@ export async function ensureDefaultWorkspace(userId: string) {
     },
   });
 
+  const sage = await db.agent.create({
+    data: {
+      workspaceId: workspace.id,
+      name: "sage",
+      displayName: "Sage",
+      provider: "gemini",
+      model: "gemini-2.5-flash",
+      role: "Research / Discovery",
+      systemPrompt:
+        "You are Sage, a research and discovery AI collaborator inside HiveMind. You represent the Google Gemini side of the team. You gather information, summarize sources, surface relevant facts and trade-offs, and help the team explore options. You are curious, concise, and evidence-oriented. You work well with ARi and Cloudy.",
+    },
+  });
+
   const room = await db.room.create({
     data: {
       workspaceId: workspace.id,
@@ -56,7 +69,11 @@ export async function ensureDefaultWorkspace(userId: string) {
       description: "Designing and building the HiveMind MVP.",
       defaultAgentId: ari.id,
       roomAgents: {
-        create: [{ agentId: ari.id }, { agentId: cloudy.id }],
+        create: [
+          { agentId: ari.id },
+          { agentId: cloudy.id },
+          { agentId: sage.id },
+        ],
       },
     },
   });
@@ -66,7 +83,7 @@ export async function ensureDefaultWorkspace(userId: string) {
       roomId: room.id,
       senderType: "system",
       content:
-        "Welcome to HiveMind! Mention @ARi or @Cloudy to bring an AI teammate into the conversation.",
+        "Welcome to HiveMind! Mention @ARi, @Cloudy, or @Sage to bring an AI teammate into the conversation.",
     },
   });
 

@@ -68,6 +68,22 @@ async function main() {
     },
   });
 
+  await db.agent.upsert({
+    where: { workspaceId_name: { workspaceId: workspace.id, name: "sage" } },
+    update: {},
+    create: {
+      workspaceId: workspace.id,
+      name: "sage",
+      displayName: "Sage",
+      provider: "gemini",
+      model: "gemini-2.5-flash",
+      role: "Research / Discovery",
+      systemPrompt:
+        "You are Sage, a research and discovery AI collaborator inside HiveMind. You represent the Google Gemini side of the team. You gather information, summarize sources, surface relevant facts and trade-offs, and help the team explore options. You are curious, concise, and evidence-oriented. You work well with ARi and Cloudy.",
+      isActive: true,
+    },
+  });
+
   // A starter room with ARi as the default agent
   const room = await db.room.upsert({
     where: { id: "room_app_dev" },
@@ -81,8 +97,8 @@ async function main() {
     },
   });
 
-  // Add both default agents to the room
-  for (const agentName of ["ari", "cloudy"]) {
+  // Add the default agents to the room
+  for (const agentName of ["ari", "cloudy", "sage"]) {
     const agent = await db.agent.findUniqueOrThrow({
       where: {
         workspaceId_name: { workspaceId: workspace.id, name: agentName },
