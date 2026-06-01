@@ -115,6 +115,9 @@ Then open <http://localhost:3000>.
 | `npm run dev` | Start the Next.js dev server |
 | `npm run build` | Production build |
 | `npm run start` | Run the production build |
+| `npm run lint` | Run ESLint |
+| `npm run test` | Run the unit tests (Vitest) |
+| `npm run test:watch` | Run tests in watch mode |
 | `npm run db:push` | Apply the Prisma schema to SQLite |
 | `npm run db:generate` | Generate the Prisma client |
 | `npm run db:seed` | Seed Van + ARi + Cloudy |

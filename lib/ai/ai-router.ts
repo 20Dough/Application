@@ -82,34 +82,47 @@ export async function routeMessage({
     return { humanMessage, agentMessages: [serializeMessage(sysRow)] };
   }
 
-  // Call each provider. One failure must not fail the whole request.
-  const agentMessages: Message[] = [];
-  for (const agent of targets) {
-    try {
+  // Call all providers in parallel. allSettled isolates failures so one
+  // provider erroring out never blocks or rolls back the others.
+  // The just-saved human message is excluded from context (it's the current
+  // message, sent separately) so the model doesn't see it twice.
+  const settled = await Promise.allSettled(
+    targets.map(async (agent) => {
       const systemContext = await buildContext({
         workspaceId: room.workspaceId,
         roomId,
         agentSystemPrompt: agent.systemPrompt,
         currentMessage: content,
+        excludeMessageId: humanMessage.id,
       });
-
       const provider = getProvider(agent.provider);
-      const reply = await provider.generateResponse({
+      return provider.generateResponse({
         model: agent.model,
         systemPrompt: systemContext,
         messages: [{ role: "user", content }],
       });
+    }),
+  );
 
+  // Persist results in the original target order so createdAt stays stable.
+  const agentMessages: Message[] = [];
+  for (let i = 0; i < targets.length; i++) {
+    const agent = targets[i];
+    const result = settled[i];
+
+    if (result.status === "fulfilled") {
       const meta: MessageMetadata = {
         provider: agent.provider as AgentType["provider"],
         model: agent.model,
+        mentionType: "human-to-ai",
+        triggeredByMessageId: humanMessage.id,
       };
       const row = await db.message.create({
         data: {
           roomId,
           senderType: "agent",
           agentId: agent.id,
-          content: reply,
+          content: result.value,
           metadata: JSON.stringify(meta),
         },
         include: messageInclude,
@@ -125,9 +138,9 @@ export async function routeMessage({
           model: agent.model,
         },
       });
-    } catch (err) {
+    } else {
       // Log raw error server-side only; show a friendly system message.
-      console.error(`[ai-router] agent ${agent.name} failed:`, err);
+      console.error(`[ai-router] agent ${agent.name} failed:`, result.reason);
       const sysRow = await db.message.create({
         data: {
           roomId,
@@ -148,7 +161,7 @@ export async function routeMessage({
 // Agent selection logic (ARCHITECTURE.md)
 // ---------------------------------------------------------------------------
 
-type RawAgent = {
+export type SelectableAgent = {
   id: string;
   name: string;
   displayName: string;
@@ -161,15 +174,15 @@ type RawAgent = {
 
 interface SelectArgs {
   mentionedAgentIds: string[];
-  activeAgents: RawAgent[];
+  activeAgents: SelectableAgent[];
   defaultAgentId: string | null;
 }
 
-function selectAgents({
+export function selectAgents({
   mentionedAgentIds,
   activeAgents,
   defaultAgentId,
-}: SelectArgs): RawAgent[] {
+}: SelectArgs): SelectableAgent[] {
   // 1–3. Mentioned active agents win.
   if (mentionedAgentIds.length > 0) {
     return activeAgents.filter((a) => mentionedAgentIds.includes(a.id));

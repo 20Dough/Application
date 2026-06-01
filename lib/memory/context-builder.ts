@@ -13,6 +13,11 @@ interface BuildContextArgs {
   roomId: string;
   agentSystemPrompt: string;
   currentMessage: string;
+  /**
+   * Message id to exclude from "Recent Conversation" — typically the just-saved
+   * human message, which is already shown separately as the current message.
+   */
+  excludeMessageId?: string;
 }
 
 export async function buildContext({
@@ -20,6 +25,7 @@ export async function buildContext({
   roomId,
   agentSystemPrompt,
   currentMessage,
+  excludeMessageId,
 }: BuildContextArgs): Promise<string> {
   const [workspace, room, projectContexts, memoryItems, decisions, recent] =
     await Promise.all([
@@ -40,7 +46,10 @@ export async function buildContext({
         take: 5,
       }),
       db.message.findMany({
-        where: { roomId },
+        where: {
+          roomId,
+          ...(excludeMessageId ? { id: { not: excludeMessageId } } : {}),
+        },
         orderBy: { createdAt: "desc" },
         take: RECENT_MESSAGE_LIMIT,
         include: { user: true, agent: true },

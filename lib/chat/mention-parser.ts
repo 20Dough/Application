@@ -10,7 +10,10 @@ export interface MentionableAgent {
   displayName: string;
 }
 
-const MENTION_REGEX = /@([a-zA-Z0-9_-]+)/g;
+// The leading (?<!\w) negative lookbehind requires the @ to NOT follow a word
+// character, so emails like "van@example.com" are not treated as mentions while
+// "@ARi", "hey @Cloudy", and "(@Researcher)" still match.
+const MENTION_REGEX = /(?<!\w)@([a-zA-Z0-9_-]+)/g;
 
 export interface ParsedMentions {
   /** Normalized, de-duplicated mention handles found in the text. */
