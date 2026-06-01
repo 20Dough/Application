@@ -3,7 +3,12 @@
 // MVP: matches AI agents by normalized name or displayName (case-insensitive).
 // Designed to be future-ready for human user mentions.
 
-import type { Agent } from "@/types";
+/** Minimal agent shape needed to resolve mentions. */
+export interface MentionableAgent {
+  id: string;
+  name: string;
+  displayName: string;
+}
 
 const MENTION_REGEX = /@([a-zA-Z0-9_-]+)/g;
 
@@ -29,7 +34,10 @@ export function extractMentions(content: string): string[] {
  * Parse mentions and resolve them against a list of agents (typically the
  * active agents in a room). Matching is by normalized `name` or `displayName`.
  */
-export function parseMentions(content: string, agents: Agent[]): ParsedMentions {
+export function parseMentions(
+  content: string,
+  agents: MentionableAgent[],
+): ParsedMentions {
   const rawMentions = extractMentions(content);
   const mentionedAgentIds = agents
     .filter(

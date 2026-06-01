@@ -6,15 +6,21 @@ import type { Agent } from "@/types";
 interface MessageInputProps {
   roomName: string;
   agents: Agent[];
+  disabled?: boolean;
   onSend: (content: string) => void;
 }
 
-export function MessageInput({ roomName, agents, onSend }: MessageInputProps) {
+export function MessageInput({
+  roomName,
+  agents,
+  disabled,
+  onSend,
+}: MessageInputProps) {
   const [value, setValue] = useState("");
 
   function handleSubmit() {
     const trimmed = value.trim();
-    if (!trimmed) return;
+    if (!trimmed || disabled) return;
     onSend(trimmed);
     setValue("");
   }
@@ -53,14 +59,15 @@ export function MessageInput({ roomName, agents, onSend }: MessageInputProps) {
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
+          disabled={disabled}
           rows={1}
           placeholder={`Message #${roomName} — mention @ARi or @Cloudy`}
-          className="max-h-40 flex-1 resize-none bg-transparent text-sm text-hive-text placeholder:text-hive-muted focus:outline-none"
+          className="max-h-40 flex-1 resize-none bg-transparent text-sm text-hive-text placeholder:text-hive-muted focus:outline-none disabled:opacity-50"
         />
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={!value.trim()}
+          disabled={!value.trim() || disabled}
           className="rounded-md bg-hive-accent px-3 py-1.5 text-sm font-semibold text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Send

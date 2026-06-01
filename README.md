@@ -2,7 +2,7 @@
 
 > Human + AI Team Collaboration Workspace — a shared space where teams of humans and teams of AI work together inside project rooms to turn ideas into completed outcomes.
 
-This repository contains the MVP scaffold (Phase 1) built from the project's source-of-truth documents: [`PROJECT_VISION.md`](./PROJECT_VISION.md), [`PRODUCT_REQUIREMENTS.md`](./PRODUCT_REQUIREMENTS.md), and [`ARCHITECTURE.md`](./ARCHITECTURE.md).
+This repository implements the working MVP — the full core collaboration loop (human message → mention → AI Router → AI responds → saved & shared) — built from the project's source-of-truth documents: [`PROJECT_VISION.md`](./PROJECT_VISION.md), [`PRODUCT_REQUIREMENTS.md`](./PRODUCT_REQUIREMENTS.md), and [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
 ## Tech stack
 
@@ -10,38 +10,61 @@ This repository contains the MVP scaffold (Phase 1) built from the project's sou
 - **Tailwind CSS** (dark theme)
 - **Prisma ORM** with **SQLite** for development (PostgreSQL-compatible schema)
 
-## What's included (Phase 1)
+## What's included
 
 - Three-pane workspace UI (dark theme):
   - **Left sidebar** — workspace name, room list, create-room button, team members
-  - **Center** — chat messages, message input, inline `@mention` highlighting
+  - **Center** — chat messages, message input, inline `@mention` highlighting, "Summarize" action
   - **Right panel** — AI agents, project context, shared memory, decisions
-- Database-driven agent model (default team: **ARi** → OpenAI, **Cloudy** → Anthropic)
-- Prisma schema for all core entities
-- Mention parser (`lib/chat/mention-parser.ts`)
-- Mock data so the UI runs with **no AI keys and no database** required
+- **Database-driven agents** (default team: **ARi** → OpenAI, **Cloudy** → Anthropic)
+- **AI Router** (`lib/ai/ai-router.ts`) — the only place AI orchestration happens
+- **Provider abstraction** — OpenAI / Anthropic / Gemini adapters behind one interface
+- **Mention system** — `@ARi`, `@Cloudy`, multi-agent, default-agent fallback
+- **Context builder** with the spec's priority order (ProjectContext before Memory)
+- **Decision summaries** generated from recent messages
+- Role-based permissions (owner / admin / member / viewer)
+- REST API routes for workspaces, rooms, messages, agents, memory, context, decisions
+- Auto-seeding bootstrap so the app works on a fresh database with **no AI keys**
 
-> ⚠️ The MVP UI uses **mock data** and **mocked agent replies**. No real AI calls are made — the AI Router (`lib/ai/ai-router.ts`) is a later build phase. The frontend never calls AI providers directly.
+> The frontend **never** calls AI providers directly — all AI runs server-side through the AI Router. When `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` are absent, providers return clearly-labeled mock replies so the full loop runs locally with zero external services.
 
 ## Project structure
 
 ```
-app/                 Next.js App Router (layout, page, globals)
+app/
+  layout.tsx, page.tsx, globals.css
+  api/                 REST routes
+    bootstrap/         One-call workspace hydration (auto-seeds)
+    workspaces/  rooms/  messages/  agents/
+    memory/  project-context/  decisions/  summaries/decision/
 components/
-  layout/            Sidebar
-  chat/              ChatPanel, MessageItem, MessageInput
-  workspace/         WorkspaceView, RightPanel
-  agents/            AgentList
+  layout/              Sidebar
+  chat/                ChatPanel, MessageItem, MessageInput
+  workspace/           WorkspaceView, RightPanel
+  agents/              AgentList
 lib/
-  db.ts              Prisma client singleton
-  utils.ts           UI helpers
-  mock-data.ts       Mock workspace/agents/messages
-  chat/              mention-parser.ts
+  db.ts                Prisma client singleton
+  auth.ts              Placeholder current user (Clerk-ready)
+  permissions.ts       Role checks
+  api.ts               API response + membership helpers
+  serialize.ts         Prisma rows → domain types
+  client-api.ts        Browser fetch helpers
+  bootstrap.ts         Default workspace seeding
+  utils.ts             UI helpers
+  ai/
+    ai-router.ts       AI orchestration (the only place)
+    types.ts           AIProvider interface
+    provider-factory.ts
+    providers/         openai, anthropic, gemini
+    mock.ts            No-key fallback
+  chat/mention-parser.ts
+  memory/context-builder.ts
+  summary/decision-summary.ts
 prisma/
-  schema.prisma      All core entities
-  seed.ts            Seeds Van + ARi + Cloudy
+  schema.prisma        All core entities
+  seed.ts              Seeds Van + ARi + Cloudy
 types/
-  index.ts           Shared domain types
+  index.ts             Shared domain types
 ```
 
 ## Getting started

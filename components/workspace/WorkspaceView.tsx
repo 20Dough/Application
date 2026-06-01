@@ -1,110 +1,195 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import type { Message } from "@/types";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type {
+  Agent,
+  Decision,
+  MemoryItem,
+  Message,
+  ProjectContext,
+  Room,
+  User,
+  Workspace,
+  WorkspaceMember,
+} from "@/types";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { RightPanel } from "@/components/workspace/RightPanel";
-import { parseMentions } from "@/lib/chat/mention-parser";
 import {
-  mockAgents,
-  mockDecisions,
-  mockMemory,
-  mockMessages,
-  mockMembers,
-  mockProjectContext,
-  mockRooms,
-  mockUser,
-  mockWorkspace,
-} from "@/lib/mock-data";
+  createRoom,
+  fetchBootstrap,
+  fetchMessages,
+  generateSummary,
+  sendMessage,
+  type BootstrapData,
+} from "@/lib/client-api";
 
 /**
- * Top-level workspace UI. Wires the three-pane layout from the architecture
- * spec (left sidebar / center chat / right panel) using mock data.
- *
- * NOTE: AI responses are mocked locally. There is no real provider call here —
- * the AI Router (lib/ai/ai-router.ts) is a later build phase. The frontend must
- * never call AI providers directly.
+ * Top-level workspace UI — three-pane layout (sidebar / chat / right panel)
+ * wired to the real backend. Messages flow through POST /api/messages, which
+ * runs the AI Router server-side. The frontend never calls AI providers.
  */
 export function WorkspaceView() {
-  const [activeRoomId, setActiveRoomId] = useState(mockRooms[0].id);
-  const [messages, setMessages] = useState<Message[]>(mockMessages);
+  const [data, setData] = useState<BootstrapData | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [workspace, setWorkspace] = useState<Workspace | null>(null);
+  const [members, setMembers] = useState<WorkspaceMember[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [projectContext, setProjectContext] = useState<ProjectContext[]>([]);
+  const [memory, setMemory] = useState<MemoryItem[]>([]);
+  const [decisions, setDecisions] = useState<Decision[]>([]);
+
+  const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [sending, setSending] = useState(false);
+
+  // Initial load
+  useEffect(() => {
+    fetchBootstrap()
+      .then((d) => {
+        setData(d);
+        setCurrentUser(d.currentUser);
+        setWorkspace(d.workspace);
+        setMembers(d.members);
+        setRooms(d.rooms);
+        setAgents(d.agents);
+        setProjectContext(d.projectContext);
+        setMemory(d.memory);
+        setDecisions(d.decisions);
+        setActiveRoomId(d.activeRoomId);
+        setMessages(d.messages);
+      })
+      .catch((e) => setError(e.message));
+  }, []);
+
+  // Load messages when switching rooms
+  const selectRoom = useCallback(
+    async (roomId: string) => {
+      setActiveRoomId(roomId);
+      try {
+        setMessages(await fetchMessages(roomId));
+      } catch (e) {
+        setError((e as Error).message);
+      }
+    },
+    [],
+  );
 
   const activeRoom = useMemo(
-    () => mockRooms.find((r) => r.id === activeRoomId) ?? mockRooms[0],
-    [activeRoomId],
+    () => rooms.find((r) => r.id === activeRoomId) ?? null,
+    [rooms, activeRoomId],
   );
 
-  const roomMessages = useMemo(
-    () => messages.filter((m) => m.roomId === activeRoomId),
-    [messages, activeRoomId],
-  );
+  async function handleSend(content: string) {
+    if (!activeRoomId || sending) return;
+    setSending(true);
 
-  function handleSend(content: string) {
-    const { mentionedAgentIds, rawMentions } = parseMentions(content, mockAgents);
-
-    const humanMessage: Message = {
-      id: `msg_${Date.now()}`,
+    // Optimistic human message
+    const optimistic: Message = {
+      id: `optimistic_${Date.now()}`,
       roomId: activeRoomId,
       senderType: "human",
-      userId: mockUser.id,
-      senderName: mockUser.name,
+      userId: currentUser?.id,
+      senderName: currentUser?.name,
       content,
       createdAt: new Date().toISOString(),
-      metadata: { mentionedAgentIds, rawMentions },
     };
+    setMessages((prev) => [...prev, optimistic]);
 
-    setMessages((prev) => [...prev, humanMessage]);
+    try {
+      const { humanMessage, agentMessages } = await sendMessage(
+        activeRoomId,
+        content,
+      );
+      // Replace the optimistic message with the saved one + AI replies
+      setMessages((prev) => [
+        ...prev.filter((m) => m.id !== optimistic.id),
+        humanMessage,
+        ...agentMessages,
+      ]);
+    } catch (e) {
+      setError((e as Error).message);
+      setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
+    } finally {
+      setSending(false);
+    }
+  }
 
-    // Mocked agent responses — stands in for the future AI Router.
-    // Selection rule: mentioned active agents, else the room default agent.
-    const targetIds =
-      mentionedAgentIds.length > 0
-        ? mentionedAgentIds
-        : activeRoom.defaultAgentId
-          ? [activeRoom.defaultAgentId]
-          : [];
+  async function handleCreateRoom() {
+    if (!workspace) return;
+    const name = window.prompt("New room name");
+    if (!name?.trim()) return;
+    try {
+      const room = await createRoom(workspace.id, name.trim());
+      setRooms((prev) => [...prev, room]);
+      await selectRoom(room.id);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
 
-    const responders = mockAgents.filter(
-      (a) => targetIds.includes(a.id) && a.isActive,
+  async function handleGenerateSummary() {
+    if (!activeRoomId) return;
+    try {
+      const decision = await generateSummary(activeRoomId);
+      setDecisions((prev) => [decision, ...prev]);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-hive-bg p-6 text-center">
+        <div>
+          <p className="mb-2 text-lg font-semibold text-hive-text">
+            Could not load HiveMind
+          </p>
+          <p className="text-sm text-hive-muted">{error}</p>
+          <p className="mt-4 text-xs text-hive-muted">
+            Did you run <code className="text-hive-accent">npm run db:push</code>?
+          </p>
+        </div>
+      </div>
     );
+  }
 
-    responders.forEach((agent, i) => {
-      const reply: Message = {
-        id: `msg_${Date.now()}_${agent.id}`,
-        roomId: activeRoomId,
-        senderType: "agent",
-        agentId: agent.id,
-        senderName: agent.displayName,
-        agentRole: agent.role,
-        content: `(${agent.displayName} would respond here once the AI Router is connected. Provider: ${agent.provider}, model: ${agent.model}.)`,
-        createdAt: new Date(Date.now() + (i + 1) * 600).toISOString(),
-        metadata: { provider: agent.provider, model: agent.model },
-      };
-      setTimeout(() => setMessages((prev) => [...prev, reply]), (i + 1) * 600);
-    });
+  if (!data || !workspace || !activeRoom) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-hive-bg">
+        <div className="animate-pulse text-sm text-hive-muted">
+          Loading workspace…
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="flex h-screen w-full overflow-hidden">
       <Sidebar
-        workspace={mockWorkspace}
-        rooms={mockRooms}
-        members={mockMembers}
-        activeRoomId={activeRoomId}
-        onSelectRoom={setActiveRoomId}
+        workspace={workspace}
+        rooms={rooms}
+        members={members}
+        activeRoomId={activeRoom.id}
+        onSelectRoom={selectRoom}
+        onCreateRoom={handleCreateRoom}
       />
       <ChatPanel
         room={activeRoom}
-        messages={roomMessages}
-        agents={mockAgents}
+        messages={messages}
+        agents={agents}
+        sending={sending}
         onSend={handleSend}
+        onGenerateSummary={handleGenerateSummary}
       />
       <RightPanel
-        agents={mockAgents}
-        projectContext={mockProjectContext}
-        memory={mockMemory}
-        decisions={mockDecisions}
+        agents={agents}
+        projectContext={projectContext}
+        memory={memory}
+        decisions={decisions}
       />
     </div>
   );

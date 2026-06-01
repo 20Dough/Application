@@ -9,6 +9,7 @@ interface SidebarProps {
   members: WorkspaceMember[];
   activeRoomId: string;
   onSelectRoom: (roomId: string) => void;
+  onCreateRoom: () => void;
 }
 
 const roleBadge: Record<string, string> = {
@@ -24,6 +25,7 @@ export function Sidebar({
   members,
   activeRoomId,
   onSelectRoom,
+  onCreateRoom,
 }: SidebarProps) {
   return (
     <aside className="flex h-full w-64 flex-col border-r border-hive-border bg-hive-surface">
@@ -49,6 +51,7 @@ export function Sidebar({
           <button
             type="button"
             title="Create room"
+            onClick={onCreateRoom}
             className="flex h-5 w-5 items-center justify-center rounded text-hive-muted transition hover:bg-hive-panel hover:text-hive-text"
           >
             +
