@@ -1,0 +1,220 @@
+// HiveMind — Prisma schema
+// SQLite for local development. Kept conceptually compatible with PostgreSQL
+// (no enums / no native arrays — statuses and JSON are stored as strings).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// People & membership
+// ---------------------------------------------------------------------------
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ownedWorkspaces Workspace[]        @relation("WorkspaceOwner")
+  memberships     WorkspaceMember[]
+  messages        Message[]
+  usageLogs       UsageLog[]
+}
+
+model Workspace {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  ownerId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner           User              @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+  members         WorkspaceMember[]
+  invitations     Invitation[]
+  rooms           Room[]
+  agents          Agent[]
+  memoryItems     MemoryItem[]
+  projectContexts ProjectContext[]
+  decisions       Decision[]
+  usageLogs       UsageLog[]
+
+  @@index([ownerId])
+}
+
+model WorkspaceMember {
+  id          String   @id @default(cuid())
+  userId      String
+  workspaceId String
+  role        String   @default("member") // owner | admin | member | viewer
+  createdAt   DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@index([workspaceId])
+}
+
+model Invitation {
+  id          String   @id @default(cuid())
+  workspaceId String
+  email       String
+  role        String   @default("member")
+  status      String   @default("pending") // pending | accepted | rejected
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
+
+// ---------------------------------------------------------------------------
+// Rooms, messages & agents
+// ---------------------------------------------------------------------------
+
+model Room {
+  id             String   @id @default(cuid())
+  workspaceId    String
+  name           String
+  description    String?
+  defaultAgentId String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  workspace    Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  defaultAgent Agent?       @relation("RoomDefaultAgent", fields: [defaultAgentId], references: [id])
+  messages     Message[]
+  roomAgents   RoomAgent[]
+  memoryItems  MemoryItem[]
+  decisions    Decision[]
+
+  @@index([workspaceId])
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  roomId     String
+  senderType String   // human | agent | system
+  userId     String?
+  agentId    String?
+  content    String
+  metadata   String?  // JSON string: mentionedAgentIds, mentionedUserIds, provider, model, error, triggeredByAgentId, triggeredByMessageId
+  createdAt  DateTime @default(now())
+
+  room   Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id])
+  agent  Agent? @relation(fields: [agentId], references: [id])
+
+  @@index([roomId])
+  @@index([createdAt])
+}
+
+model Agent {
+  id           String   @id @default(cuid())
+  workspaceId  String
+  name         String   // normalized handle, e.g. "ari"
+  displayName  String   // user-facing, e.g. "ARi"
+  provider     String   // openai | anthropic | gemini
+  model        String
+  role         String
+  systemPrompt String
+  avatarUrl    String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  workspace    Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  messages     Message[]
+  roomAgents   RoomAgent[]
+  defaultRooms Room[]      @relation("RoomDefaultAgent")
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId])
+}
+
+model RoomAgent {
+  id        String   @id @default(cuid())
+  roomId    String
+  agentId   String
+  createdAt DateTime @default(now())
+
+  room  Room  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, agentId])
+  @@index([roomId])
+}
+
+// ---------------------------------------------------------------------------
+// Knowledge: memory, project context & decisions
+// ---------------------------------------------------------------------------
+
+model MemoryItem {
+  id          String   @id @default(cuid())
+  workspaceId String
+  roomId      String?
+  title       String
+  content     String
+  importance  Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  room      Room?     @relation(fields: [roomId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
+}
+
+model ProjectContext {
+  id          String   @id @default(cuid())
+  workspaceId String
+  title       String
+  content     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
+
+model Decision {
+  id          String   @id @default(cuid())
+  workspaceId String
+  roomId      String?
+  title       String
+  summary     String
+  actionItems String?  // JSON string array
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  room      Room?     @relation(fields: [roomId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
+}
+
+model UsageLog {
+  id           String   @id @default(cuid())
+  userId       String?
+  workspaceId  String?
+  provider     String
+  model        String
+  inputTokens  Int?
+  outputTokens Int?
+  totalCost    Float?
+  createdAt    DateTime @default(now())
+
+  user      User?      @relation(fields: [userId], references: [id])
+  workspace Workspace? @relation(fields: [workspaceId], references: [id])
+
+  @@index([workspaceId])
+}
