@@ -23,8 +23,25 @@ This repository implements the working MVP — the full core collaboration loop 
 - **Context builder** with the spec's priority order (ProjectContext before Memory)
 - **Decision summaries** generated from recent messages
 - Role-based permissions (owner / admin / member / viewer)
-- REST API routes for workspaces, rooms, messages, agents, memory, context, decisions
+- **Human collaboration** — workspace members, invitations (invite by email), room-agent membership
+- Full REST API with per-resource CRUD (see below)
+- Interactive right panel — add project context / memory inline (admins/owners)
 - Auto-seeding bootstrap so the app works on a fresh database with **no AI keys**
+
+## API
+
+| Resource | Routes |
+| --- | --- |
+| Workspaces | `GET/POST /api/workspaces`, `GET/PATCH/DELETE /api/workspaces/[id]` |
+| Rooms | `GET/POST /api/rooms`, `GET/PATCH/DELETE /api/rooms/[id]` |
+| Messages | `GET/POST /api/messages` (POST runs the AI Router) |
+| Agents | `GET/POST /api/agents`, `PATCH/DELETE /api/agents/[id]` |
+| Room agents | `GET/POST /api/room-agents`, `DELETE /api/room-agents/[id]` |
+| Memory | `GET/POST /api/memory`, `PATCH/DELETE /api/memory/[id]` |
+| Project context | `GET/POST /api/project-context`, `PATCH/DELETE /api/project-context/[id]` |
+| Decisions | `GET /api/decisions`, `POST /api/summaries/decision` |
+| Invitations | `GET/POST /api/invitations` |
+| Bootstrap | `GET /api/bootstrap` (one-call hydration + auto-seed) |
 
 > The frontend **never** calls AI providers directly — all AI runs server-side through the AI Router. When `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` are absent, providers return clearly-labeled mock replies so the full loop runs locally with zero external services.
 

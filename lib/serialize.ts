@@ -6,11 +6,13 @@
 import type {
   Agent,
   Decision,
+  Invitation,
   MemoryItem,
   Message,
   MessageMetadata,
   ProjectContext,
   Room,
+  RoomAgent,
   User,
   Workspace,
   WorkspaceMember,
@@ -192,5 +194,43 @@ export function serializeDecision(d: RawDecision): Decision {
     summary: d.summary,
     actionItems: parseJson<string[]>(d.actionItems, []),
     createdAt: iso(d.createdAt),
+  };
+}
+
+type RawInvitation = {
+  id: string;
+  workspaceId: string;
+  email: string;
+  role: string;
+  status: string;
+  createdAt: Date;
+};
+
+export function serializeInvitation(i: RawInvitation): Invitation {
+  return {
+    id: i.id,
+    workspaceId: i.workspaceId,
+    email: i.email,
+    role: i.role as Invitation["role"],
+    status: i.status as Invitation["status"],
+    createdAt: iso(i.createdAt),
+  };
+}
+
+type RawRoomAgent = {
+  id: string;
+  roomId: string;
+  agentId: string;
+  createdAt: Date;
+  agent?: RawAgent | null;
+};
+
+export function serializeRoomAgent(ra: RawRoomAgent): RoomAgent {
+  return {
+    id: ra.id,
+    roomId: ra.roomId,
+    agentId: ra.agentId,
+    createdAt: iso(ra.createdAt),
+    agent: ra.agent ? serializeAgent(ra.agent) : undefined,
   };
 }

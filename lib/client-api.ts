@@ -3,6 +3,7 @@
 import type {
   Agent,
   Decision,
+  Invitation,
   MemoryItem,
   Message,
   ProjectContext,
@@ -75,4 +76,46 @@ export async function generateSummary(roomId: string): Promise<Decision> {
       body: JSON.stringify({ roomId }),
     }),
   );
+}
+
+function postJson<T>(url: string, body: unknown): Promise<T> {
+  return fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  }).then((r) => unwrap<T>(r));
+}
+
+export async function addMemory(
+  workspaceId: string,
+  title: string,
+  content: string,
+  importance = 1,
+): Promise<MemoryItem> {
+  return postJson<MemoryItem>("/api/memory", {
+    workspaceId,
+    title,
+    content,
+    importance,
+  });
+}
+
+export async function addProjectContext(
+  workspaceId: string,
+  title: string,
+  content: string,
+): Promise<ProjectContext> {
+  return postJson<ProjectContext>("/api/project-context", {
+    workspaceId,
+    title,
+    content,
+  });
+}
+
+export async function inviteMember(
+  workspaceId: string,
+  email: string,
+  role: string,
+): Promise<Invitation> {
+  return postJson<Invitation>("/api/invitations", { workspaceId, email, role });
 }

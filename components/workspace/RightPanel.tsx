@@ -4,12 +4,16 @@ import { useState } from "react";
 import type { Agent, Decision, MemoryItem, ProjectContext } from "@/types";
 import { cn } from "@/lib/utils";
 import { AgentList } from "@/components/agents/AgentList";
+import { InlineAddForm } from "@/components/workspace/InlineAddForm";
 
 interface RightPanelProps {
   agents: Agent[];
   projectContext: ProjectContext[];
   memory: MemoryItem[];
   decisions: Decision[];
+  canManage: boolean;
+  onAddMemory: (title: string, content: string) => Promise<void>;
+  onAddContext: (title: string, content: string) => Promise<void>;
 }
 
 type Tab = "agents" | "context" | "memory" | "decisions";
@@ -26,6 +30,9 @@ export function RightPanel({
   projectContext,
   memory,
   decisions,
+  canManage,
+  onAddMemory,
+  onAddContext,
 }: RightPanelProps) {
   const [tab, setTab] = useState<Tab>("agents");
 
@@ -59,16 +66,28 @@ export function RightPanel({
 
         {tab === "context" && (
           <Section title="Project Context">
+            {projectContext.length === 0 && (
+              <Empty>No project context yet.</Empty>
+            )}
             {projectContext.map((ctx) => (
               <Card key={ctx.id} title={ctx.title}>
                 {ctx.content}
               </Card>
             ))}
+            {canManage && (
+              <InlineAddForm
+                label="+ Add project context"
+                onSubmit={onAddContext}
+                titlePlaceholder="e.g. Mission"
+                contentPlaceholder="The stable identity / direction of this workspace"
+              />
+            )}
           </Section>
         )}
 
         {tab === "memory" && (
           <Section title="Shared Memory">
+            {memory.length === 0 && <Empty>No shared memory yet.</Empty>}
             {memory.map((item) => (
               <Card
                 key={item.id}
@@ -78,11 +97,22 @@ export function RightPanel({
                 {item.content}
               </Card>
             ))}
+            {canManage && (
+              <InlineAddForm
+                label="+ Add memory"
+                onSubmit={onAddMemory}
+                titlePlaceholder="e.g. Tech stack"
+                contentPlaceholder="An important long-term fact for the team"
+              />
+            )}
           </Section>
         )}
 
         {tab === "decisions" && (
           <Section title="Decisions">
+            {decisions.length === 0 && (
+              <Empty>No decisions yet. Use ✦ Summarize in a room.</Empty>
+            )}
             {decisions.map((d) => (
               <Card key={d.id} title={d.title}>
                 <p className="mb-2">{d.summary}</p>
@@ -102,6 +132,14 @@ export function RightPanel({
         )}
       </div>
     </aside>
+  );
+}
+
+function Empty({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="rounded-md border border-dashed border-hive-border px-2.5 py-3 text-center text-xs text-hive-muted">
+      {children}
+    </p>
   );
 }
 

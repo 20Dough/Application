@@ -72,6 +72,14 @@ export interface Agent {
   updatedAt: string;
 }
 
+export interface RoomAgent {
+  id: string;
+  roomId: string;
+  agentId: string;
+  createdAt: string;
+  agent?: Agent;
+}
+
 /**
  * Structured metadata attached to a message. Stored as a JSON string in the
  * database (Message.metadata) but typed here for use across the app. Designed

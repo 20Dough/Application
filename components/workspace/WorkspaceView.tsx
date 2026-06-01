@@ -16,6 +16,8 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { RightPanel } from "@/components/workspace/RightPanel";
 import {
+  addMemory,
+  addProjectContext,
   createRoom,
   fetchBootstrap,
   fetchMessages,
@@ -83,6 +85,12 @@ export function WorkspaceView() {
     [rooms, activeRoomId],
   );
 
+  // Whether the current user can manage workspace data (admin/owner).
+  const canManage = useMemo(() => {
+    const me = members.find((m) => m.userId === currentUser?.id);
+    return me?.role === "owner" || me?.role === "admin";
+  }, [members, currentUser]);
+
   async function handleSend(content: string) {
     if (!activeRoomId || sending) return;
     setSending(true);
@@ -141,6 +149,20 @@ export function WorkspaceView() {
     }
   }
 
+  async function handleAddMemory(title: string, content: string) {
+    if (!workspace) return;
+    const item = await addMemory(workspace.id, title, content);
+    setMemory((prev) =>
+      [...prev, item].sort((a, b) => b.importance - a.importance),
+    );
+  }
+
+  async function handleAddContext(title: string, content: string) {
+    if (!workspace) return;
+    const item = await addProjectContext(workspace.id, title, content);
+    setProjectContext((prev) => [...prev, item]);
+  }
+
   if (error) {
     return (
       <div className="flex h-screen items-center justify-center bg-hive-bg p-6 text-center">
@@ -190,6 +212,9 @@ export function WorkspaceView() {
         projectContext={projectContext}
         memory={memory}
         decisions={decisions}
+        canManage={canManage}
+        onAddMemory={handleAddMemory}
+        onAddContext={handleAddContext}
       />
     </div>
   );
