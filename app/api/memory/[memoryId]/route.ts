@@ -30,7 +30,9 @@ export async function PATCH(req: Request, { params }: Params) {
       data: {
         ...(title !== undefined ? { title: String(title).trim() } : {}),
         ...(content !== undefined ? { content: String(content).trim() } : {}),
-        ...(importance !== undefined ? { importance: Number(importance) || 1 } : {}),
+        ...(importance !== undefined
+          ? { importance: Number(importance) || 1 }
+          : {}),
       },
     });
     return ok(serializeMemory(updated));

@@ -46,7 +46,10 @@ export async function routeMessage({
     .filter((a) => a.isActive);
 
   // Extract mentions against active room agents
-  const { mentionedAgentIds, rawMentions } = parseMentions(content, activeAgents);
+  const { mentionedAgentIds, rawMentions } = parseMentions(
+    content,
+    activeAgents,
+  );
 
   // Save the human message (with mention metadata)
   const humanMeta: MessageMetadata = { mentionedAgentIds, rawMentions };

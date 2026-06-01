@@ -68,17 +68,14 @@ export function WorkspaceView() {
   }, []);
 
   // Load messages when switching rooms
-  const selectRoom = useCallback(
-    async (roomId: string) => {
-      setActiveRoomId(roomId);
-      try {
-        setMessages(await fetchMessages(roomId));
-      } catch (e) {
-        setError((e as Error).message);
-      }
-    },
-    [],
-  );
+  const selectRoom = useCallback(async (roomId: string) => {
+    setActiveRoomId(roomId);
+    try {
+      setMessages(await fetchMessages(roomId));
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }, []);
 
   const activeRoom = useMemo(
     () => rooms.find((r) => r.id === activeRoomId) ?? null,
@@ -172,7 +169,8 @@ export function WorkspaceView() {
           </p>
           <p className="text-sm text-hive-muted">{error}</p>
           <p className="mt-4 text-xs text-hive-muted">
-            Did you run <code className="text-hive-accent">npm run db:push</code>?
+            Did you run{" "}
+            <code className="text-hive-accent">npm run db:push</code>?
           </p>
         </div>
       </div>

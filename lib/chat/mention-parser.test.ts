@@ -69,10 +69,7 @@ describe("parseMentions", () => {
   });
 
   it("does not match an email-embedded handle", () => {
-    const { mentionedAgentIds } = parseMentions(
-      "ping ari@cloudy.com",
-      agents,
-    );
+    const { mentionedAgentIds } = parseMentions("ping ari@cloudy.com", agents);
     expect(mentionedAgentIds).toEqual([]);
   });
 });

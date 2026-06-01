@@ -28,7 +28,9 @@ async function main() {
   });
 
   await db.workspaceMember.upsert({
-    where: { userId_workspaceId: { userId: van.id, workspaceId: workspace.id } },
+    where: {
+      userId_workspaceId: { userId: van.id, workspaceId: workspace.id },
+    },
     update: {},
     create: { userId: van.id, workspaceId: workspace.id, role: "owner" },
   });
@@ -82,7 +84,9 @@ async function main() {
   // Add both default agents to the room
   for (const agentName of ["ari", "cloudy"]) {
     const agent = await db.agent.findUniqueOrThrow({
-      where: { workspaceId_name: { workspaceId: workspace.id, name: agentName } },
+      where: {
+        workspaceId_name: { workspaceId: workspace.id, name: agentName },
+      },
     });
     await db.roomAgent.upsert({
       where: { roomId_agentId: { roomId: room.id, agentId: agent.id } },

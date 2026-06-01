@@ -173,11 +173,11 @@ function Card({
     <div className="rounded-md border border-hive-border bg-hive-surface p-2.5">
       <div className="mb-1 flex items-center justify-between">
         <span className="text-sm font-semibold text-hive-text">{title}</span>
-        {badge && (
-          <span className="text-[10px] text-hive-accent">{badge}</span>
-        )}
+        {badge && <span className="text-[10px] text-hive-accent">{badge}</span>}
       </div>
-      <div className="text-xs leading-relaxed text-hive-text/80">{children}</div>
+      <div className="text-xs leading-relaxed text-hive-text/80">
+        {children}
+      </div>
     </div>
   );
 }

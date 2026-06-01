@@ -36,10 +36,19 @@ export async function POST(req: Request) {
   try {
     const user = await getCurrentUser();
     const body = await req.json();
-    const { workspaceId, name, displayName, provider, model, role, systemPrompt } =
-      body;
+    const {
+      workspaceId,
+      name,
+      displayName,
+      provider,
+      model,
+      role,
+      systemPrompt,
+    } = body;
     if (!workspaceId || !name || !displayName || !provider || !model)
-      return badRequest("workspaceId, name, displayName, provider, model required");
+      return badRequest(
+        "workspaceId, name, displayName, provider, model required",
+      );
 
     const memberRole = await requireMembership(user.id, workspaceId);
     if (!canManageWorkspace(memberRole))

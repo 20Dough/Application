@@ -1,7 +1,9 @@
 import type { ProviderName } from "@/types";
 
 /** Join class names, skipping falsy values. */
-export function cn(...classes: Array<string | false | null | undefined>): string {
+export function cn(
+  ...classes: Array<string | false | null | undefined>
+): string {
   return classes.filter(Boolean).join(" ");
 }
 

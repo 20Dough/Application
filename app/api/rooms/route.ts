@@ -1,6 +1,12 @@
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { ok, badRequest, forbidden, serverError, requireMembership } from "@/lib/api";
+import {
+  ok,
+  badRequest,
+  forbidden,
+  serverError,
+  requireMembership,
+} from "@/lib/api";
 import { serializeRoom } from "@/lib/serialize";
 
 // GET /api/rooms?workspaceId=

@@ -30,9 +30,7 @@ export async function generateDecisionSummary({
   const topic = title ?? `Discussion in ${room?.name ?? "room"}`;
   const participantNames = [
     ...new Set(
-      ordered.map(
-        (m) => m.user?.name ?? m.agent?.displayName ?? "Unknown",
-      ),
+      ordered.map((m) => m.user?.name ?? m.agent?.displayName ?? "Unknown"),
     ),
   ];
 
@@ -50,7 +48,9 @@ export async function generateDecisionSummary({
 
   // Naive action-item extraction: lines that look like tasks.
   const actionItems = ordered
-    .filter((m) => /\b(todo|action|next step|should|let's|need to)\b/i.test(m.content))
+    .filter((m) =>
+      /\b(todo|action|next step|should|let's|need to)\b/i.test(m.content),
+    )
     .slice(-5)
     .map((m) => m.content.slice(0, 120));
 

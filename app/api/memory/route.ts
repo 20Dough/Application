@@ -35,7 +35,8 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const user = await getCurrentUser();
-    const { workspaceId, roomId, title, content, importance } = await req.json();
+    const { workspaceId, roomId, title, content, importance } =
+      await req.json();
     if (!workspaceId || !title?.trim() || !content?.trim())
       return badRequest("workspaceId, title and content are required");
 

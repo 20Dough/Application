@@ -74,7 +74,8 @@ export async function buildContext({
   if (workspace) {
     lines.push("Workspace:");
     lines.push(`Name: ${workspace.name}`);
-    if (workspace.description) lines.push(`Description: ${workspace.description}`);
+    if (workspace.description)
+      lines.push(`Description: ${workspace.description}`);
     lines.push("");
   }
 

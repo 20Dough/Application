@@ -51,7 +51,8 @@ export async function POST(req: Request) {
 
     const role = await requireMembership(user.id, room.workspaceId);
     if (!role) return forbidden("Not a member of this workspace");
-    if (!canSendMessages(role)) return forbidden("Viewers cannot send messages");
+    if (!canSendMessages(role))
+      return forbidden("Viewers cannot send messages");
 
     const result = await routeMessage({
       roomId,

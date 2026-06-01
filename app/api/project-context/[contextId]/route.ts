@@ -17,7 +17,9 @@ export async function PATCH(req: Request, { params }: Params) {
   try {
     const { contextId } = await params;
     const user = await getCurrentUser();
-    const item = await db.projectContext.findUnique({ where: { id: contextId } });
+    const item = await db.projectContext.findUnique({
+      where: { id: contextId },
+    });
     if (!item) return notFound("Project context not found");
 
     const role = await requireMembership(user.id, item.workspaceId);
@@ -44,7 +46,9 @@ export async function DELETE(_req: Request, { params }: Params) {
   try {
     const { contextId } = await params;
     const user = await getCurrentUser();
-    const item = await db.projectContext.findUnique({ where: { id: contextId } });
+    const item = await db.projectContext.findUnique({
+      where: { id: contextId },
+    });
     if (!item) return notFound("Project context not found");
 
     const role = await requireMembership(user.id, item.workspaceId);

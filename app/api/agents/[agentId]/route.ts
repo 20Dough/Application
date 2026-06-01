@@ -25,8 +25,14 @@ export async function PATCH(req: Request, { params }: Params) {
       return forbidden("Only admins/owners can manage agents");
 
     const body = await req.json();
-    const { displayName, provider, model, role: agentRole, systemPrompt, isActive } =
-      body;
+    const {
+      displayName,
+      provider,
+      model,
+      role: agentRole,
+      systemPrompt,
+      isActive,
+    } = body;
     const updated = await db.agent.update({
       where: { id: agentId },
       data: {

@@ -62,7 +62,9 @@ export function ChatPanel({
             <MessageItem
               key={message.id}
               message={message}
-              agent={message.agentId ? agentsById.get(message.agentId) : undefined}
+              agent={
+                message.agentId ? agentsById.get(message.agentId) : undefined
+              }
             />
           ))
         )}

@@ -169,9 +169,7 @@ type RawProjectContext = {
   updatedAt: Date;
 };
 
-export function serializeProjectContext(
-  c: RawProjectContext,
-): ProjectContext {
+export function serializeProjectContext(c: RawProjectContext): ProjectContext {
   return { ...c, createdAt: iso(c.createdAt), updatedAt: iso(c.updatedAt) };
 }
 
