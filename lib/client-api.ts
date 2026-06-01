@@ -32,6 +32,42 @@ async function unwrap<T>(res: Response): Promise<T> {
   return json.data as T;
 }
 
+// --- Auth ---
+
+export async function fetchMe(): Promise<User | null> {
+  const res = await fetch("/api/auth/me");
+  if (res.status === 401) return null;
+  return unwrap<User>(res);
+}
+
+export async function login(username: string, password: string): Promise<User> {
+  return unwrap<User>(
+    await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    }),
+  );
+}
+
+export async function register(
+  username: string,
+  password: string,
+  name: string,
+): Promise<User> {
+  return unwrap<User>(
+    await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password, name }),
+    }),
+  );
+}
+
+export async function logout(): Promise<void> {
+  await fetch("/api/auth/logout", { method: "POST" });
+}
+
 export async function fetchBootstrap(): Promise<BootstrapData> {
   return unwrap<BootstrapData>(await fetch("/api/bootstrap"));
 }

@@ -15,13 +15,16 @@ import type {
 import { Sidebar } from "@/components/layout/Sidebar";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { RightPanel } from "@/components/workspace/RightPanel";
+import { AuthForm } from "@/components/auth/AuthForm";
 import {
   addMemory,
   addProjectContext,
   createRoom,
   fetchBootstrap,
+  fetchMe,
   fetchMessages,
   generateSummary,
+  logout,
   sendMessage,
   type BootstrapData,
 } from "@/lib/client-api";
@@ -32,6 +35,7 @@ import {
  * runs the AI Router server-side. The frontend never calls AI providers.
  */
 export function WorkspaceView() {
+  const [authChecked, setAuthChecked] = useState(false);
   const [data, setData] = useState<BootstrapData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,8 +52,8 @@ export function WorkspaceView() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [sending, setSending] = useState(false);
 
-  // Initial load
-  useEffect(() => {
+  // Load the full workspace for the signed-in user.
+  const loadWorkspace = useCallback(() => {
     fetchBootstrap()
       .then((d) => {
         setData(d);
@@ -67,6 +71,32 @@ export function WorkspaceView() {
       .catch((e) => setError(e.message));
   }, []);
 
+  // On mount, check whether there is an active session.
+  useEffect(() => {
+    fetchMe()
+      .then((user) => {
+        setCurrentUser(user);
+        setAuthChecked(true);
+        if (user) loadWorkspace();
+      })
+      .catch(() => setAuthChecked(true));
+  }, [loadWorkspace]);
+
+  function handleAuthenticated(user: User) {
+    setCurrentUser(user);
+    loadWorkspace();
+  }
+
+  async function handleLogout() {
+    await logout();
+    // Reset to the signed-out state.
+    setCurrentUser(null);
+    setData(null);
+    setWorkspace(null);
+    setMessages([]);
+    setActiveRoomId(null);
+  }
+
   // Load messages when switching rooms
   const selectRoom = useCallback(async (roomId: string) => {
     setActiveRoomId(roomId);
@@ -76,6 +106,44 @@ export function WorkspaceView() {
       setError((e as Error).message);
     }
   }, []);
+
+  // Realtime: subscribe to the active room's SSE stream and append incoming
+  // messages live. Deduped by id so messages this client already added (via the
+  // POST response or optimistic update) don't appear twice.
+  useEffect(() => {
+    if (!activeRoomId) return;
+    const source = new EventSource(`/api/rooms/${activeRoomId}/stream`);
+
+    source.onmessage = (e) => {
+      const event = JSON.parse(e.data) as
+        | { type: "message"; message: Message }
+        | { type: "ping" };
+      if (event.type !== "message") return;
+      const incoming = event.message;
+
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === incoming.id)) return prev;
+        // Drop a matching optimistic message from this client, if any.
+        const withoutOptimistic = prev.filter(
+          (m) =>
+            !(
+              m.id.startsWith("optimistic_") &&
+              m.senderType === "human" &&
+              m.content === incoming.content &&
+              m.userId === incoming.userId
+            ),
+        );
+        return [...withoutOptimistic, incoming];
+      });
+    };
+
+    // EventSource auto-reconnects; surface only persistent failures quietly.
+    source.onerror = () => {
+      // Keep the connection object; the browser retries automatically.
+    };
+
+    return () => source.close();
+  }, [activeRoomId]);
 
   const activeRoom = useMemo(
     () => rooms.find((r) => r.id === activeRoomId) ?? null,
@@ -105,16 +173,10 @@ export function WorkspaceView() {
     setMessages((prev) => [...prev, optimistic]);
 
     try {
-      const { humanMessage, agentMessages } = await sendMessage(
-        activeRoomId,
-        content,
-      );
-      // Replace the optimistic message with the saved one + AI replies
-      setMessages((prev) => [
-        ...prev.filter((m) => m.id !== optimistic.id),
-        humanMessage,
-        ...agentMessages,
-      ]);
+      // The saved human message and AI replies also arrive via the SSE stream;
+      // the stream handler swaps this optimistic placeholder for the real
+      // message (matched on content) so we don't need the response here.
+      await sendMessage(activeRoomId, content);
     } catch (e) {
       setError((e as Error).message);
       setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
@@ -160,6 +222,20 @@ export function WorkspaceView() {
     setProjectContext((prev) => [...prev, item]);
   }
 
+  // Still checking the session — show a neutral splash.
+  if (!authChecked) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-hive-bg">
+        <div className="animate-pulse text-sm text-hive-muted">Loading…</div>
+      </div>
+    );
+  }
+
+  // Not signed in — show the auth screen.
+  if (!currentUser) {
+    return <AuthForm onAuthenticated={handleAuthenticated} />;
+  }
+
   if (error) {
     return (
       <div className="flex h-screen items-center justify-center bg-hive-bg p-6 text-center">
@@ -193,9 +269,11 @@ export function WorkspaceView() {
         workspace={workspace}
         rooms={rooms}
         members={members}
+        currentUser={currentUser}
         activeRoomId={activeRoom.id}
         onSelectRoom={selectRoom}
         onCreateRoom={handleCreateRoom}
+        onLogout={handleLogout}
       />
       <ChatPanel
         room={activeRoom}

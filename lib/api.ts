@@ -13,6 +13,10 @@ export function badRequest(message: string) {
   return NextResponse.json({ error: message }, { status: 400 });
 }
 
+export function unauthorized(message = "Not authenticated") {
+  return NextResponse.json({ error: message }, { status: 401 });
+}
+
 export function forbidden(message = "Forbidden") {
   return NextResponse.json({ error: message }, { status: 403 });
 }

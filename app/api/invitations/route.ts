@@ -6,6 +6,7 @@ import {
   forbidden,
   serverError,
   requireMembership,
+  unauthorized,
 } from "@/lib/api";
 import { canManageWorkspace } from "@/lib/permissions";
 import { serializeInvitation } from "@/lib/serialize";
@@ -17,6 +18,7 @@ const VALID_ROLES: WorkspaceRole[] = ["admin", "member", "viewer"];
 export async function GET(req: Request) {
   try {
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const workspaceId = new URL(req.url).searchParams.get("workspaceId");
     if (!workspaceId) return badRequest("workspaceId is required");
 
@@ -40,6 +42,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const { workspaceId, email, role: invitedRole } = await req.json();
     if (!workspaceId || !email?.trim())
       return badRequest("workspaceId and email are required");

@@ -12,6 +12,7 @@ import { parseMentions } from "@/lib/chat/mention-parser";
 import { buildContext } from "@/lib/memory/context-builder";
 import { getProvider } from "@/lib/ai/provider-factory";
 import { serializeMessage } from "@/lib/serialize";
+import { publishToRoom } from "@/lib/events";
 import type { Agent as AgentType, Message, MessageMetadata } from "@/types";
 
 const messageInclude = { user: true, agent: true } as const;
@@ -64,6 +65,7 @@ export async function routeMessage({
     include: messageInclude,
   });
   const humanMessage = serializeMessage(humanRow);
+  publishToRoom(roomId, { type: "message", message: humanMessage });
 
   // Select target agents
   const targets = selectAgents({
@@ -82,7 +84,9 @@ export async function routeMessage({
       },
       include: messageInclude,
     });
-    return { humanMessage, agentMessages: [serializeMessage(sysRow)] };
+    const sysMessage = serializeMessage(sysRow);
+    publishToRoom(roomId, { type: "message", message: sysMessage });
+    return { humanMessage, agentMessages: [sysMessage] };
   }
 
   // Call all providers in parallel. allSettled isolates failures so one
@@ -130,7 +134,9 @@ export async function routeMessage({
         },
         include: messageInclude,
       });
-      agentMessages.push(serializeMessage(row));
+      const agentMessage = serializeMessage(row);
+      agentMessages.push(agentMessage);
+      publishToRoom(roomId, { type: "message", message: agentMessage });
 
       // Best-effort usage log
       await db.usageLog.create({
@@ -153,7 +159,9 @@ export async function routeMessage({
         },
         include: messageInclude,
       });
-      agentMessages.push(serializeMessage(sysRow));
+      const sysMessage = serializeMessage(sysRow);
+      agentMessages.push(sysMessage);
+      publishToRoom(roomId, { type: "message", message: sysMessage });
     }
   }
 

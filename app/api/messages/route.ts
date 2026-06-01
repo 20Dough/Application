@@ -7,6 +7,7 @@ import {
   notFound,
   serverError,
   requireMembership,
+  unauthorized,
 } from "@/lib/api";
 import { canSendMessages } from "@/lib/permissions";
 import { serializeMessage } from "@/lib/serialize";
@@ -16,6 +17,7 @@ import { routeMessage } from "@/lib/ai/ai-router";
 export async function GET(req: Request) {
   try {
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const roomId = new URL(req.url).searchParams.get("roomId");
     if (!roomId) return badRequest("roomId is required");
 
@@ -42,6 +44,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const { roomId, content } = await req.json();
     if (!roomId || !content?.trim())
       return badRequest("roomId and content are required");

@@ -37,15 +37,25 @@ function parseJson<T>(value: string | null | undefined, fallback: T): T {
 
 type RawUser = {
   id: string;
-  email: string;
+  username: string;
+  email: string | null;
   name: string;
   avatarUrl: string | null;
   createdAt: Date;
   updatedAt: Date;
+  // passwordHash intentionally omitted — never serialized to clients.
 };
 
 export function serializeUser(u: RawUser): User {
-  return { ...u, createdAt: iso(u.createdAt), updatedAt: iso(u.updatedAt) };
+  return {
+    id: u.id,
+    username: u.username,
+    email: u.email,
+    name: u.name,
+    avatarUrl: u.avatarUrl,
+    createdAt: iso(u.createdAt),
+    updatedAt: iso(u.updatedAt),
+  };
 }
 
 type RawWorkspace = {

@@ -17,24 +17,31 @@ This repository implements the working MVP — the full core collaboration loop 
   - **Center** — chat messages, message input, inline `@mention` highlighting, "Summarize" action
   - **Right panel** — AI agents, project context, shared memory, decisions
 - **Database-driven agents** (default team: **ARi** → OpenAI, **Cloudy** → Anthropic)
+- **Accounts & login** — username + password sign-up/sign-in, database-backed
+  sessions (httpOnly cookie), scrypt password hashing; each user is shown by name
+- **Realtime chat** — new human and AI messages stream live over Server-Sent
+  Events, no reloading
 - **AI Router** (`lib/ai/ai-router.ts`) — the only place AI orchestration happens
 - **Provider abstraction** — OpenAI / Anthropic / Gemini adapters behind one interface
-- **Mention system** — `@ARi`, `@Cloudy`, multi-agent, default-agent fallback
+- **3 default agents** — ARi (OpenAI), Cloudy (Anthropic), Sage (Gemini)
+- **Mention system** — `@ARi`, `@Cloudy`, `@Sage`, multi-agent, default-agent fallback
 - **Context builder** with the spec's priority order (ProjectContext before Memory)
 - **Decision summaries** generated from recent messages
 - Role-based permissions (owner / admin / member / viewer)
 - **Human collaboration** — workspace members, invitations (invite by email), room-agent membership
 - Full REST API with per-resource CRUD (see below)
 - Interactive right panel — add project context / memory inline (admins/owners)
-- Auto-seeding bootstrap so the app works on a fresh database with **no AI keys**
+- Auto-seeding bootstrap so each new account gets a ready-to-use workspace
 
 ## API
 
 | Resource | Routes |
 | --- | --- |
+| Auth | `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me` |
 | Workspaces | `GET/POST /api/workspaces`, `GET/PATCH/DELETE /api/workspaces/[id]` |
 | Rooms | `GET/POST /api/rooms`, `GET/PATCH/DELETE /api/rooms/[id]` |
 | Messages | `GET/POST /api/messages` (POST runs the AI Router) |
+| Realtime | `GET /api/rooms/[roomId]/stream` (Server-Sent Events) |
 | Agents | `GET/POST /api/agents`, `PATCH/DELETE /api/agents/[id]` |
 | Room agents | `GET/POST /api/room-agents`, `DELETE /api/room-agents/[id]` |
 | Memory | `GET/POST /api/memory`, `PATCH/DELETE /api/memory/[id]` |
@@ -79,7 +86,7 @@ lib/
   summary/decision-summary.ts
 prisma/
   schema.prisma        All core entities
-  seed.ts              Seeds Van + ARi + Cloudy
+  seed.ts              Seeds a demo account + ARi, Cloudy, Sage
 types/
   index.ts             Shared domain types
 ```
@@ -97,16 +104,17 @@ cp .env.example .env
 npm run db:push
 npm run db:generate
 
-# 4. (Optional) Seed the default team and workspace
+# 4. (Optional) Seed a demo account you can log in with
+#    username: founder   password: password123
 npm run db:seed
 
 # 5. Start the dev server
 npm run dev
 ```
 
-Then open <http://localhost:3000>.
-
-> The UI runs on mock data, so step 5 works even before the database steps.
+Then open <http://localhost:3000>, create an account (or use the seeded demo
+login), and you'll land in your own auto-seeded workspace with ARi, Cloudy, and
+Sage ready to mention.
 
 ## Scripts
 
@@ -120,7 +128,7 @@ Then open <http://localhost:3000>.
 | `npm run test:watch` | Run tests in watch mode |
 | `npm run db:push` | Apply the Prisma schema to SQLite |
 | `npm run db:generate` | Generate the Prisma client |
-| `npm run db:seed` | Seed Van + ARi + Cloudy |
+| `npm run db:seed` | Seed a demo account (founder / password123) + ARi, Cloudy, Sage |
 | `npm run db:studio` | Open Prisma Studio |
 
 ## Roadmap

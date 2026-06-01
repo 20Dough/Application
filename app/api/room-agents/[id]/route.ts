@@ -6,6 +6,7 @@ import {
   notFound,
   serverError,
   requireMembership,
+  unauthorized,
 } from "@/lib/api";
 import { canManageWorkspace } from "@/lib/permissions";
 
@@ -16,6 +17,7 @@ export async function DELETE(_req: Request, { params }: Params) {
   try {
     const { id } = await params;
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const roomAgent = await db.roomAgent.findUnique({
       where: { id },
       include: { room: true },

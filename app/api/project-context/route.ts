@@ -6,6 +6,7 @@ import {
   forbidden,
   serverError,
   requireMembership,
+  unauthorized,
 } from "@/lib/api";
 import { canManageWorkspace } from "@/lib/permissions";
 import { serializeProjectContext } from "@/lib/serialize";
@@ -14,6 +15,7 @@ import { serializeProjectContext } from "@/lib/serialize";
 export async function GET(req: Request) {
   try {
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const workspaceId = new URL(req.url).searchParams.get("workspaceId");
     if (!workspaceId) return badRequest("workspaceId is required");
 
@@ -35,6 +37,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const { workspaceId, title, content } = await req.json();
     if (!workspaceId || !title?.trim() || !content?.trim())
       return badRequest("workspaceId, title and content are required");

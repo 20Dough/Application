@@ -7,6 +7,7 @@ import {
   notFound,
   serverError,
   requireMembership,
+  unauthorized,
 } from "@/lib/api";
 import { canManageWorkspace } from "@/lib/permissions";
 import { serializeInvitation } from "@/lib/serialize";
@@ -23,6 +24,7 @@ export async function PATCH(req: Request, { params }: Params) {
   try {
     const { id } = await params;
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const invitation = await db.invitation.findUnique({ where: { id } });
     if (!invitation) return notFound("Invitation not found");
 
@@ -34,6 +36,7 @@ export async function PATCH(req: Request, { params }: Params) {
     // may change the invitation status.
     const role = await requireMembership(user.id, invitation.workspaceId);
     const isInvitee =
+      !!user.email &&
       user.email.toLowerCase() === invitation.email.toLowerCase();
     if (!canManageWorkspace(role) && !isInvitee)
       return forbidden("You cannot modify this invitation");
@@ -79,6 +82,7 @@ export async function DELETE(_req: Request, { params }: Params) {
   try {
     const { id } = await params;
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const invitation = await db.invitation.findUnique({ where: { id } });
     if (!invitation) return notFound("Invitation not found");
 

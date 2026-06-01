@@ -1,22 +1,28 @@
-// Placeholder auth for the MVP.
+// Auth helpers built on database-backed sessions (see lib/session.ts).
 //
-// Returns a fake "current user" so the app works locally without Clerk. The
-// abstraction is intentionally thin so a real auth provider can replace the
-// body of getCurrentUser() later without touching call sites.
-//
-// Wrapped in React's `cache` so multiple calls within the same server request
-// (e.g. several helpers each resolving the current user) hit the database once.
+// getCurrentUser() returns the signed-in user or null. API routes should treat
+// null as unauthorized. The abstraction stays thin so a real provider (e.g.
+// Clerk) can replace the session lookup later without touching call sites.
 
 import { cache } from "react";
-import { db } from "@/lib/db";
+import { getSessionUser } from "@/lib/session";
 
+// Wrapped in React's `cache` so multiple calls within the same server request
+// resolve the session only once.
 export const getCurrentUser = cache(async () => {
-  const email = process.env.DEV_USER_EMAIL ?? "van@hivemind.dev";
-  const name = process.env.DEV_USER_NAME ?? "Van";
-
-  return db.user.upsert({
-    where: { email },
-    update: {},
-    create: { email, name },
-  });
+  return getSessionUser();
 });
+
+/** Like getCurrentUser but throws if not signed in — handy in route handlers. */
+export async function requireUser() {
+  const user = await getCurrentUser();
+  if (!user) throw new UnauthorizedError();
+  return user;
+}
+
+export class UnauthorizedError extends Error {
+  constructor() {
+    super("Not authenticated");
+    this.name = "UnauthorizedError";
+  }
+}

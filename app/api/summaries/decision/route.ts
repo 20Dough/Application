@@ -7,6 +7,7 @@ import {
   notFound,
   serverError,
   requireMembership,
+  unauthorized,
 } from "@/lib/api";
 import { canSendMessages } from "@/lib/permissions";
 import { serializeDecision } from "@/lib/serialize";
@@ -16,6 +17,7 @@ import { generateDecisionSummary } from "@/lib/summary/decision-summary";
 export async function POST(req: Request) {
   try {
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const { roomId, title } = await req.json();
     if (!roomId) return badRequest("roomId is required");
 

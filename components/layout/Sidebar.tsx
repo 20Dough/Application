@@ -1,15 +1,17 @@
 "use client";
 
-import type { Room, Workspace, WorkspaceMember } from "@/types";
+import type { Room, User, Workspace, WorkspaceMember } from "@/types";
 import { cn, initials } from "@/lib/utils";
 
 interface SidebarProps {
   workspace: Workspace;
   rooms: Room[];
   members: WorkspaceMember[];
+  currentUser: User;
   activeRoomId: string;
   onSelectRoom: (roomId: string) => void;
   onCreateRoom: () => void;
+  onLogout: () => void;
 }
 
 const roleBadge: Record<string, string> = {
@@ -23,9 +25,11 @@ export function Sidebar({
   workspace,
   rooms,
   members,
+  currentUser,
   activeRoomId,
   onSelectRoom,
   onCreateRoom,
+  onLogout,
 }: SidebarProps) {
   return (
     <aside className="flex h-full w-64 flex-col border-r border-hive-border bg-hive-surface">
@@ -106,6 +110,29 @@ export function Sidebar({
             </li>
           ))}
         </ul>
+      </div>
+
+      {/* Current user + logout */}
+      <div className="flex items-center gap-2 border-t border-hive-border px-3 py-3">
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-hive-accent text-[10px] font-bold text-black">
+          {initials(currentUser.name)}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-hive-text">
+            {currentUser.name}
+          </p>
+          <p className="truncate text-[11px] text-hive-muted">
+            @{currentUser.username}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onLogout}
+          title="Sign out"
+          className="rounded-md px-2 py-1 text-xs text-hive-muted transition hover:bg-hive-panel hover:text-hive-text"
+        >
+          Sign out
+        </button>
       </div>
     </aside>
   );

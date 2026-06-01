@@ -3,15 +3,22 @@
 // Cloudy (Anthropic). Run with: npm run db:seed
 
 import { PrismaClient } from "@prisma/client";
+import { hashPassword } from "../lib/password";
 
 const db = new PrismaClient();
 
 async function main() {
-  // Founder
+  // A demo founder account so you can log in right away.
+  // Username: founder  Password: password123
   const van = await db.user.upsert({
-    where: { email: "van@hivemind.dev" },
+    where: { username: "founder" },
     update: {},
-    create: { email: "van@hivemind.dev", name: "Van" },
+    create: {
+      username: "founder",
+      passwordHash: await hashPassword("password123"),
+      email: "van@hivemind.dev",
+      name: "Van",
+    },
   });
 
   // Workspace

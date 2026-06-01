@@ -6,6 +6,7 @@ import {
   forbidden,
   serverError,
   requireMembership,
+  unauthorized,
 } from "@/lib/api";
 import { serializeDecision } from "@/lib/serialize";
 
@@ -13,6 +14,7 @@ import { serializeDecision } from "@/lib/serialize";
 export async function GET(req: Request) {
   try {
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const workspaceId = new URL(req.url).searchParams.get("workspaceId");
     if (!workspaceId) return badRequest("workspaceId is required");
 
