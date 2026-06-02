@@ -1,0 +1,36 @@
+# Render deployment blueprint for HiveMind.
+# Creates a web service + a managed PostgreSQL database.
+# Docs: https://render.com/docs/blueprint-spec
+#
+# After first deploy, set the AI keys in the dashboard (or leave blank to use
+# the built-in mock replies):
+#   OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY
+
+services:
+  - type: web
+    name: hivemind
+    runtime: node
+    plan: starter
+    buildCommand: npm ci && npm run build
+    # migrate the database, then start the long-running server (SSE realtime
+    # needs a persistent process, which Render web services provide).
+    startCommand: npm run start:prod
+    healthCheckPath: /api/auth/me
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: hivemind-db
+          property: connectionString
+      - key: NODE_ENV
+        value: production
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+
+databases:
+  - name: hivemind-db
+    plan: basic-256mb
+    postgresMajorVersion: "16"

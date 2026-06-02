@@ -8,7 +8,8 @@ This repository implements the working MVP — the full core collaboration loop 
 
 - **Next.js** (App Router) + **React** + **TypeScript**
 - **Tailwind CSS** (dark theme)
-- **Prisma ORM** with **SQLite** for development (PostgreSQL-compatible schema)
+- **Prisma ORM** with **PostgreSQL**
+- Deploys to Railway / Render / Fly.io — see [`DEPLOY.md`](./DEPLOY.md)
 
 ## What's included
 
@@ -100,18 +101,21 @@ types/
 # 1. Install dependencies
 npm install
 
-# 2. Set up environment variables
+# 2. Start PostgreSQL (Docker is easiest)
+docker run --name hivemind-pg -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=hivemind -p 5432:5432 -d postgres:16
+
+# 3. Set up environment variables (DATABASE_URL already targets localhost:5432)
 cp .env.example .env
 
-# 3. Create the SQLite database and generate the Prisma client
-npm run db:push
-npm run db:generate
+# 4. Apply migrations
+npm run db:migrate
 
-# 4. (Optional) Seed a demo account you can log in with
+# 5. (Optional) Seed a demo account you can log in with
 #    username: founder   password: password123
 npm run db:seed
 
-# 5. Start the dev server
+# 6. Start the dev server
 npm run dev
 ```
 
@@ -126,10 +130,12 @@ Sage ready to mention.
 | `npm run dev` | Start the Next.js dev server |
 | `npm run build` | Production build |
 | `npm run start` | Run the production build |
+| `npm run start:prod` | Migrate the DB, then start (used in deploys) |
 | `npm run lint` | Run ESLint |
 | `npm run test` | Run the unit tests (Vitest) |
 | `npm run test:watch` | Run tests in watch mode |
-| `npm run db:push` | Apply the Prisma schema to SQLite |
+| `npm run db:migrate` | Create/apply dev migrations |
+| `npm run db:deploy` | Apply migrations in production |
 | `npm run db:generate` | Generate the Prisma client |
 | `npm run db:seed` | Seed a demo account (founder / password123) + ARi, Cloudy, Sage |
 | `npm run db:studio` | Open Prisma Studio |
