@@ -7,7 +7,9 @@ import type {
   MemoryItem,
   Message,
   ProjectContext,
+  ProviderName,
   Room,
+  RoomAgent,
   User,
   Workspace,
   WorkspaceMember,
@@ -122,6 +124,22 @@ function postJson<T>(url: string, body: unknown): Promise<T> {
   }).then((r) => unwrap<T>(r));
 }
 
+function patchJson<T>(url: string, body: unknown): Promise<T> {
+  return fetch(url, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  }).then((r) => unwrap<T>(r));
+}
+
+async function del(url: string): Promise<void> {
+  const res = await fetch(url, { method: "DELETE" });
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(json.error ?? "Request failed");
+  }
+}
+
 export async function addMemory(
   workspaceId: string,
   title: string,
@@ -148,10 +166,85 @@ export async function addProjectContext(
   });
 }
 
+// --- Agents ---
+
+export interface AgentInput {
+  name: string;
+  displayName: string;
+  provider: ProviderName;
+  model: string;
+  role: string;
+  systemPrompt: string;
+}
+
+export async function createAgent(
+  workspaceId: string,
+  input: AgentInput,
+): Promise<Agent> {
+  return postJson<Agent>("/api/agents", { workspaceId, ...input });
+}
+
+export async function updateAgent(
+  agentId: string,
+  changes: Partial<AgentInput & { isActive: boolean }>,
+): Promise<Agent> {
+  return patchJson<Agent>(`/api/agents/${agentId}`, changes);
+}
+
+export async function deleteAgent(agentId: string): Promise<void> {
+  return del(`/api/agents/${agentId}`);
+}
+
+// --- Room agents ---
+
+export async function fetchRoomAgents(roomId: string): Promise<RoomAgent[]> {
+  return unwrap<RoomAgent[]>(
+    await fetch(`/api/room-agents?roomId=${encodeURIComponent(roomId)}`),
+  );
+}
+
+export async function addAgentToRoom(
+  roomId: string,
+  agentId: string,
+): Promise<RoomAgent> {
+  return postJson<RoomAgent>("/api/room-agents", { roomId, agentId });
+}
+
+export async function removeRoomAgent(roomAgentId: string): Promise<void> {
+  return del(`/api/room-agents/${roomAgentId}`);
+}
+
+// --- Members & invitations ---
+
 export async function inviteMember(
   workspaceId: string,
   email: string,
   role: string,
 ): Promise<Invitation> {
   return postJson<Invitation>("/api/invitations", { workspaceId, email, role });
+}
+
+export async function fetchInvitations(
+  workspaceId: string,
+): Promise<Invitation[]> {
+  return unwrap<Invitation[]>(
+    await fetch(
+      `/api/invitations?workspaceId=${encodeURIComponent(workspaceId)}`,
+    ),
+  );
+}
+
+export async function revokeInvitation(invitationId: string): Promise<void> {
+  return del(`/api/invitations/${invitationId}`);
+}
+
+export async function updateMemberRole(
+  memberId: string,
+  role: string,
+): Promise<WorkspaceMember> {
+  return patchJson<WorkspaceMember>(`/api/members/${memberId}`, { role });
+}
+
+export async function removeMember(memberId: string): Promise<void> {
+  return del(`/api/members/${memberId}`);
 }

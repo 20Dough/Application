@@ -11,6 +11,7 @@ interface SidebarProps {
   activeRoomId: string;
   onSelectRoom: (roomId: string) => void;
   onCreateRoom: () => void;
+  onManageTeam: () => void;
   onLogout: () => void;
 }
 
@@ -29,6 +30,7 @@ export function Sidebar({
   activeRoomId,
   onSelectRoom,
   onCreateRoom,
+  onManageTeam,
   onLogout,
 }: SidebarProps) {
   return (
@@ -83,8 +85,17 @@ export function Sidebar({
 
       {/* Members */}
       <div className="border-t border-hive-border px-2 py-3">
-        <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-hive-muted">
-          Team Members
+        <div className="mb-2 flex items-center justify-between px-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-hive-muted">
+            Team Members
+          </span>
+          <button
+            type="button"
+            onClick={onManageTeam}
+            className="text-[11px] text-hive-muted transition hover:text-hive-accent"
+          >
+            Manage
+          </button>
         </div>
         <ul className="space-y-1">
           {members.map((member) => (

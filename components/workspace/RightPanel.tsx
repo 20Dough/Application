@@ -14,6 +14,7 @@ interface RightPanelProps {
   canManage: boolean;
   onAddMemory: (title: string, content: string) => Promise<void>;
   onAddContext: (title: string, content: string) => Promise<void>;
+  onManageAgents: () => void;
 }
 
 type Tab = "agents" | "context" | "memory" | "decisions";
@@ -33,6 +34,7 @@ export function RightPanel({
   canManage,
   onAddMemory,
   onAddContext,
+  onManageAgents,
 }: RightPanelProps) {
   const [tab, setTab] = useState<Tab>("agents");
 
@@ -59,7 +61,10 @@ export function RightPanel({
 
       <div className="flex-1 overflow-y-auto p-3">
         {tab === "agents" && (
-          <Section title="AI Agents">
+          <Section
+            title="AI Agents"
+            action={{ label: "Manage", onClick: onManageAgents }}
+          >
             <AgentList agents={agents} />
           </Section>
         )}
@@ -145,16 +150,29 @@ function Empty({ children }: { children: React.ReactNode }) {
 
 function Section({
   title,
+  action,
   children,
 }: {
   title: string;
+  action?: { label: string; onClick: () => void };
   children: React.ReactNode;
 }) {
   return (
     <div>
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-hive-muted">
-        {title}
-      </h3>
+      <div className="mb-2 flex items-center justify-between">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-hive-muted">
+          {title}
+        </h3>
+        {action && (
+          <button
+            type="button"
+            onClick={action.onClick}
+            className="text-[11px] text-hive-muted transition hover:text-hive-accent"
+          >
+            {action.label}
+          </button>
+        )}
+      </div>
       <div className="space-y-2">{children}</div>
     </div>
   );

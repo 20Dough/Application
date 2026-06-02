@@ -16,6 +16,8 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { RightPanel } from "@/components/workspace/RightPanel";
 import { AuthForm } from "@/components/auth/AuthForm";
+import { ManageTeam } from "@/components/workspace/ManageTeam";
+import { ManageAgents } from "@/components/workspace/ManageAgents";
 import {
   addMemory,
   addProjectContext,
@@ -51,6 +53,9 @@ export function WorkspaceView() {
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [sending, setSending] = useState(false);
+
+  // Which management modal is open, if any.
+  const [modal, setModal] = useState<"team" | "agents" | null>(null);
 
   // Load the full workspace for the signed-in user.
   const loadWorkspace = useCallback(() => {
@@ -273,6 +278,7 @@ export function WorkspaceView() {
         activeRoomId={activeRoom.id}
         onSelectRoom={selectRoom}
         onCreateRoom={handleCreateRoom}
+        onManageTeam={() => setModal("team")}
         onLogout={handleLogout}
       />
       <ChatPanel
@@ -291,7 +297,29 @@ export function WorkspaceView() {
         canManage={canManage}
         onAddMemory={handleAddMemory}
         onAddContext={handleAddContext}
+        onManageAgents={() => setModal("agents")}
       />
+
+      {modal === "team" && (
+        <ManageTeam
+          workspaceId={workspace.id}
+          currentUser={currentUser}
+          members={members}
+          canManage={canManage}
+          onClose={() => setModal(null)}
+          onMembersChange={setMembers}
+        />
+      )}
+      {modal === "agents" && (
+        <ManageAgents
+          workspaceId={workspace.id}
+          roomId={activeRoom.id}
+          roomName={activeRoom.name}
+          agents={agents}
+          onClose={() => setModal(null)}
+          onAgentsChange={setAgents}
+        />
+      )}
     </div>
   );
 }

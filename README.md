@@ -29,6 +29,8 @@ This repository implements the working MVP — the full core collaboration loop 
 - **Decision summaries** generated from recent messages
 - Role-based permissions (owner / admin / member / viewer)
 - **Human collaboration** — workspace members, invitations (invite by email), room-agent membership
+- **Team & agent management UI** — invite/remove members and change roles; create,
+  edit, activate/deactivate, delete agents and add/remove them from a room
 - Full REST API with per-resource CRUD (see below)
 - Interactive right panel — add project context / memory inline (admins/owners)
 - Auto-seeding bootstrap so each new account gets a ready-to-use workspace
@@ -47,7 +49,8 @@ This repository implements the working MVP — the full core collaboration loop 
 | Memory | `GET/POST /api/memory`, `PATCH/DELETE /api/memory/[id]` |
 | Project context | `GET/POST /api/project-context`, `PATCH/DELETE /api/project-context/[id]` |
 | Decisions | `GET /api/decisions`, `POST /api/summaries/decision` |
-| Invitations | `GET/POST /api/invitations` |
+| Members | `PATCH/DELETE /api/members/[id]` (change role / remove) |
+| Invitations | `GET/POST /api/invitations`, `PATCH/DELETE /api/invitations/[id]` |
 | Bootstrap | `GET /api/bootstrap` (one-call hydration + auto-seed) |
 
 > The frontend **never** calls AI providers directly — all AI runs server-side through the AI Router. When `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` are absent, providers return clearly-labeled mock replies so the full loop runs locally with zero external services.
