@@ -46,7 +46,9 @@ export async function PATCH(req: Request, { params }: Params) {
 
     // Passcode changes are restricted to the room's creator (or, if the room
     // predates creator tracking, the workspace owner).
-    let passcodeData: { passcodeHash: string | null; passcodeSalt: string | null } | undefined;
+    let passcodeData:
+      | { passcodeHash: string | null; passcodeSalt: string | null }
+      | undefined;
     if (passcode !== undefined) {
       const isCreator = room.createdById
         ? room.createdById === user.id

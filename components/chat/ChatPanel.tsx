@@ -1,8 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Agent, Attachment, Message, Room } from "@/types";
-import type { SummaryRange } from "@/lib/summary/decision-summary";
+import {
+  SUMMARY_RANGES,
+  SUMMARY_RANGE_LABELS,
+  type SummaryRange,
+} from "@/lib/summary/decision-summary";
 import { MessageItem } from "./MessageItem";
 import { MessageInput } from "./MessageInput";
 
@@ -19,12 +23,10 @@ interface ChatPanelProps {
   onSetPasscode?: () => void;
 }
 
-const SUMMARY_OPTIONS: { range: SummaryRange; label: string }[] = [
-  { range: "recent30", label: "Last 30 messages" },
-  { range: "2h", label: "Past 2 hours" },
-  { range: "1d", label: "Past day" },
-  { range: "project", label: "Whole project" },
-];
+const SUMMARY_OPTIONS = SUMMARY_RANGES.map((range) => ({
+  range,
+  label: SUMMARY_RANGE_LABELS[range],
+}));
 
 export function ChatPanel({
   room,
@@ -40,16 +42,24 @@ export function ChatPanel({
 }: ChatPanelProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
-  const agentsById = new Map(agents.map((a) => [a.id, a]));
-  const attachmentsByMessage = new Map<string, Attachment[]>();
-  for (const a of attachments) {
-    if (!a.messageId) continue;
-    const list = attachmentsByMessage.get(a.messageId) ?? [];
-    list.push(a);
-    attachmentsByMessage.set(a.messageId, list);
-  }
+  const agentsById = useMemo(
+    () => new Map(agents.map((a) => [a.id, a])),
+    [agents],
+  );
+  const attachmentsByMessage = useMemo(() => {
+    const map = new Map<string, Attachment[]>();
+    for (const a of attachments) {
+      if (!a.messageId) continue;
+      const list = map.get(a.messageId) ?? [];
+      list.push(a);
+      map.set(a.messageId, list);
+    }
+    return map;
+  }, [attachments]);
 
-  const isCreator = Boolean(currentUserId && room.createdById === currentUserId);
+  const isCreator = Boolean(
+    currentUserId && room.createdById === currentUserId,
+  );
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });

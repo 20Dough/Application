@@ -9,8 +9,12 @@ import {
   requireMembership,
 } from "@/lib/api";
 import { canSendMessages } from "@/lib/permissions";
+import { canAccessRoom } from "@/lib/rooms/passcode";
 import { serializeDecision } from "@/lib/serialize";
-import { generateDecisionSummary } from "@/lib/summary/decision-summary";
+import {
+  generateDecisionSummary,
+  SUMMARY_RANGES,
+} from "@/lib/summary/decision-summary";
 
 // POST /api/summaries/decision — generate a decision summary from a room
 export async function POST(req: Request) {
@@ -25,9 +29,9 @@ export async function POST(req: Request) {
     const role = await requireMembership(user.id, room.workspaceId);
     if (!canSendMessages(role))
       return forbidden("You do not have permission to generate summaries");
+    if (!canAccessRoom(room, req)) return forbidden("Room is locked");
 
-    const validRanges = ["recent30", "2h", "1d", "project"] as const;
-    const safeRange = validRanges.includes(range) ? range : "recent30";
+    const safeRange = SUMMARY_RANGES.includes(range) ? range : "recent30";
 
     const decision = await generateDecisionSummary({
       workspaceId: room.workspaceId,

@@ -38,9 +38,7 @@ export function Sidebar({
   const filteredMembers = useMemo(
     () =>
       q
-        ? members.filter((m) =>
-            (m.user?.name ?? "").toLowerCase().includes(q),
-          )
+        ? members.filter((m) => (m.user?.name ?? "").toLowerCase().includes(q))
         : members,
     [members, q],
   );
@@ -101,7 +99,9 @@ export function Sidebar({
                   : "text-hive-muted hover:bg-hive-panel/60 hover:text-hive-text",
               )}
             >
-              <span className="text-hive-muted">{room.isLocked ? "🔒" : "#"}</span>
+              <span className="text-hive-muted">
+                {room.isLocked ? "🔒" : "#"}
+              </span>
               <span className="truncate">{room.name}</span>
             </button>
           ))}

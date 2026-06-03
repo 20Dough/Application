@@ -64,7 +64,10 @@ export async function sendMessage(
   return unwrap(
     await fetch("/api/messages", {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...passcodeHeader(passcode) },
+      headers: {
+        "Content-Type": "application/json",
+        ...passcodeHeader(passcode),
+      },
       body: JSON.stringify({ roomId, content, attachmentIds }),
     }),
   );
@@ -73,18 +76,28 @@ export async function sendMessage(
 export async function uploadFile(
   roomId: string,
   file: File,
+  passcode?: string,
 ): Promise<Attachment> {
   const form = new FormData();
   form.append("roomId", roomId);
   form.append("file", file);
   return unwrap<Attachment>(
-    await fetch("/api/files", { method: "POST", body: form }),
+    await fetch("/api/files", {
+      method: "POST",
+      headers: passcodeHeader(passcode),
+      body: form,
+    }),
   );
 }
 
-export async function fetchAttachments(roomId: string): Promise<Attachment[]> {
+export async function fetchAttachments(
+  roomId: string,
+  passcode?: string,
+): Promise<Attachment[]> {
   return unwrap<Attachment[]>(
-    await fetch(`/api/files?roomId=${encodeURIComponent(roomId)}`),
+    await fetch(`/api/files?roomId=${encodeURIComponent(roomId)}`, {
+      headers: passcodeHeader(passcode),
+    }),
   );
 }
 
@@ -121,7 +134,12 @@ export async function updateAgent(
   patch: Partial<
     Pick<
       Agent,
-      "displayName" | "provider" | "model" | "role" | "systemPrompt" | "isActive"
+      | "displayName"
+      | "provider"
+      | "model"
+      | "role"
+      | "systemPrompt"
+      | "isActive"
     >
   >,
 ): Promise<Agent> {
@@ -150,11 +168,15 @@ export async function createRoom(
 export async function generateSummary(
   roomId: string,
   range: SummaryRange = "recent30",
+  passcode?: string,
 ): Promise<Decision> {
   return unwrap<Decision>(
     await fetch("/api/summaries/decision", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...passcodeHeader(passcode),
+      },
       body: JSON.stringify({ roomId, range }),
     }),
   );

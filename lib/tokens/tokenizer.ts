@@ -13,6 +13,8 @@ export function estimateTokens(text: string | null | undefined): number {
 }
 
 /** Estimate tokens across many strings (e.g. a system prompt + messages). */
-export function estimateTokensFor(...parts: Array<string | null | undefined>): number {
+export function estimateTokensFor(
+  ...parts: Array<string | null | undefined>
+): number {
   return parts.reduce((sum, p) => sum + estimateTokens(p), 0);
 }

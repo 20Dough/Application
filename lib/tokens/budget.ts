@@ -5,12 +5,12 @@
 // double-counted: the AI Router writes one UsageLog row per AI response.
 
 import { db } from "@/lib/db";
-import { estimateCost, getModelInfo, modelTokenLimit } from "@/lib/ai/model-catalog";
-import type {
-  AppTokenStats,
-  ProviderName,
-  WorkspaceBudget,
-} from "@/types";
+import {
+  estimateCost,
+  getModelInfo,
+  modelTokenLimit,
+} from "@/lib/ai/model-catalog";
+import type { AppTokenStats, ProviderName, WorkspaceBudget } from "@/types";
 
 /** Compute the live token budget for a workspace from its UsageLog rows. */
 export async function getWorkspaceBudget(
@@ -60,8 +60,7 @@ export async function getAppTokenStats(): Promise<AppTokenStats> {
     db.workspace.count(),
   ]);
 
-  const totalUsed =
-    (agg._sum.inputTokens ?? 0) + (agg._sum.outputTokens ?? 0);
+  const totalUsed = (agg._sum.inputTokens ?? 0) + (agg._sum.outputTokens ?? 0);
 
   return {
     totalUsed,

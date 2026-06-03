@@ -16,6 +16,16 @@ export const SUMMARY_RANGE_LABELS: Record<SummaryRange, string> = {
   project: "Whole project",
 };
 
+/** The valid range values, derived from the labels so the two never drift. */
+export const SUMMARY_RANGES = Object.keys(
+  SUMMARY_RANGE_LABELS,
+) as SummaryRange[];
+
+// Heuristic summary tuning.
+const RECENT_MESSAGE_LIMIT = 30;
+const KEY_POINT_COUNT = 5;
+const SNIPPET_LENGTH = 120;
+
 function rangeStart(range: SummaryRange): Date | null {
   const now = Date.now();
   switch (range) {
@@ -50,8 +60,8 @@ export async function generateDecisionSummary({
       ...(since ? { createdAt: { gte: since } } : {}),
     },
     orderBy: { createdAt: "desc" },
-    // recent30 caps at 30; time/project ranges take everything in range.
-    ...(range === "recent30" ? { take: 30 } : {}),
+    // recent30 caps the count; time/project ranges take everything in range.
+    ...(range === "recent30" ? { take: RECENT_MESSAGE_LIMIT } : {}),
     include: { user: true, agent: true },
   });
 
@@ -74,9 +84,9 @@ export async function generateDecisionSummary({
     `Messages reviewed: ${ordered.length}`,
     "",
     "Key points:",
-    ...ordered.slice(-5).map((m) => {
+    ...ordered.slice(-KEY_POINT_COUNT).map((m) => {
       const who = m.user?.name ?? m.agent?.displayName ?? "System";
-      return `- ${who}: ${m.content.slice(0, 120)}`;
+      return `- ${who}: ${m.content.slice(0, SNIPPET_LENGTH)}`;
     }),
   ];
 
@@ -85,8 +95,8 @@ export async function generateDecisionSummary({
     .filter((m) =>
       /\b(todo|action|next step|should|let's|need to)\b/i.test(m.content),
     )
-    .slice(-5)
-    .map((m) => m.content.slice(0, 120));
+    .slice(-KEY_POINT_COUNT)
+    .map((m) => m.content.slice(0, SNIPPET_LENGTH));
 
   return db.decision.create({
     data: {

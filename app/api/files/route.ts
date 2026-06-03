@@ -9,6 +9,7 @@ import {
   requireMembership,
 } from "@/lib/api";
 import { canSendMessages } from "@/lib/permissions";
+import { canAccessRoom } from "@/lib/rooms/passcode";
 import { parseFileToText } from "@/lib/files/parse";
 import { serializeAttachment } from "@/lib/serialize";
 
@@ -26,6 +27,7 @@ export async function GET(req: Request) {
 
     const role = await requireMembership(user.id, room.workspaceId);
     if (!role) return forbidden("Not a member of this workspace");
+    if (!canAccessRoom(room, req)) return forbidden("Room is locked");
 
     const attachments = await db.attachment.findMany({
       where: { roomId },
@@ -56,8 +58,8 @@ export async function POST(req: Request) {
     if (!room) return notFound("Room not found");
 
     const role = await requireMembership(user.id, room.workspaceId);
-    if (!canSendMessages(role))
-      return forbidden("Viewers cannot upload files");
+    if (!canSendMessages(role)) return forbidden("Viewers cannot upload files");
+    if (!canAccessRoom(room, req)) return forbidden("Room is locked");
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const { text } = await parseFileToText(

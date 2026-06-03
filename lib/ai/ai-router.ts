@@ -146,17 +146,14 @@ export async function routeMessage({
   // Swap out any agent whose model has exhausted its token budget.
   const plan = applyExhaustionFallback(targets, activeAgents, exhaustedModels);
 
-  // --- Optional web search (shared across all responding agents) ---
-  let webSearchBlock: string | undefined;
-  let usedWebSearch = false;
-  if (shouldSearch(content)) {
-    const out = await webSearch(content);
-    webSearchBlock = formatSearchResults(out);
-    usedWebSearch = true;
-  }
-
-  // Parsed text of files attached to this message, for the agents to read.
-  const attachments = await loadAttachmentContexts(attachmentIds, roomId);
+  // Gather the web search (when warranted) and attachment text concurrently —
+  // they're independent and both feed the agents' context.
+  const usedWebSearch = shouldSearch(content);
+  const [searchOut, attachments] = await Promise.all([
+    usedWebSearch ? webSearch(content) : Promise.resolve(null),
+    loadAttachmentContexts(attachmentIds, roomId),
+  ]);
+  const webSearchBlock = searchOut ? formatSearchResults(searchOut) : undefined;
 
   // Generate all responses in parallel; isolate failures so one bad provider
   // never blocks or rolls back the others.
@@ -250,9 +247,12 @@ export async function routeMessage({
       });
     } else {
       agentMessages.push(
-        await saveSystem(`${p.agent.displayName} could not respond right now.`, {
-          error: "provider_failed",
-        }),
+        await saveSystem(
+          `${p.agent.displayName} could not respond right now.`,
+          {
+            error: "provider_failed",
+          },
+        ),
       );
     }
   }
@@ -296,7 +296,11 @@ async function resolveTargets({
   // Explicit @mentions always win.
   if (mentionedAgentIds.length > 0) {
     return {
-      targets: selectAgents({ mentionedAgentIds, activeAgents, defaultAgentId }),
+      targets: selectAgents({
+        mentionedAgentIds,
+        activeAgents,
+        defaultAgentId,
+      }),
       selectedBy: "mention",
     };
   }

@@ -12,10 +12,7 @@ interface AgentEditorProps {
   onUpdate: (
     agentId: string,
     patch: Partial<
-      Pick<
-        Agent,
-        "displayName" | "provider" | "model" | "role" | "isActive"
-      >
+      Pick<Agent, "displayName" | "provider" | "model" | "role" | "isActive">
     >,
   ) => Promise<void>;
 }

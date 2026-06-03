@@ -74,7 +74,7 @@ export function WorkspaceView() {
     async (roomId: string, passcode?: string) => {
       const [msgs, atts] = await Promise.all([
         fetchMessages(roomId, passcode),
-        fetchAttachments(roomId),
+        fetchAttachments(roomId, passcode),
       ]);
       setMessages(msgs);
       setAttachments(atts);
@@ -101,7 +101,9 @@ export function WorkspaceView() {
 
         const firstRoom = d.rooms.find((r) => r.id === d.activeRoomId);
         if (firstRoom && !firstRoom.isLocked) {
-          fetchAttachments(firstRoom.id).then(setAttachments).catch(() => {});
+          fetchAttachments(firstRoom.id)
+            .then(setAttachments)
+            .catch(() => {});
         }
       })
       .catch((e) => setError(e.message));
@@ -203,7 +205,9 @@ export function WorkspaceView() {
         ...agentMessages,
       ]);
       if (attachmentIds.length) {
-        fetchAttachments(activeRoomId).then(setAttachments).catch(() => {});
+        fetchAttachments(activeRoomId, unlocked[activeRoomId])
+          .then(setAttachments)
+          .catch(() => {});
       }
       if (workspace) refreshTokens(workspace.id);
     } catch (e) {
@@ -216,7 +220,7 @@ export function WorkspaceView() {
 
   async function handleUploadFile(file: File): Promise<Attachment> {
     if (!activeRoomId) throw new Error("No active room");
-    return uploadFile(activeRoomId, file);
+    return uploadFile(activeRoomId, file, unlocked[activeRoomId]);
   }
 
   async function handleCreateRoom() {
@@ -235,7 +239,11 @@ export function WorkspaceView() {
   async function handleGenerateSummary(range: SummaryRange) {
     if (!activeRoomId) return;
     try {
-      const decision = await generateSummary(activeRoomId, range);
+      const decision = await generateSummary(
+        activeRoomId,
+        range,
+        unlocked[activeRoomId],
+      );
       setDecisions((prev) => [decision, ...prev]);
     } catch (e) {
       setError((e as Error).message);

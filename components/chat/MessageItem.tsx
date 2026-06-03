@@ -56,7 +56,10 @@ export function MessageItem({ message, agent, attachments }: MessageItemProps) {
             </span>
           )}
           {isAgent && message.metadata?.usedWebSearch && (
-            <span className="text-[11px] text-hive-muted/70" title="Used web search">
+            <span
+              className="text-[11px] text-hive-muted/70"
+              title="Used web search"
+            >
               🔎
             </span>
           )}

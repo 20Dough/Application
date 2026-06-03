@@ -27,3 +27,20 @@ export function verifyPasscode(
   if (candidate.length !== expected.length) return false;
   return timingSafeEqual(candidate, expected);
 }
+
+/** Minimal shape needed to gate access to a room. */
+export interface LockableRoom {
+  passcodeHash: string | null;
+  passcodeSalt: string | null;
+}
+
+/**
+ * Whether a request may access a locked room. Open rooms are always allowed;
+ * locked rooms require a matching passcode in the `x-room-passcode` header.
+ * Used by every route that reads or writes room data so the gate stays uniform.
+ */
+export function canAccessRoom(room: LockableRoom, req: Request): boolean {
+  if (!room.passcodeHash) return true;
+  const provided = req.headers.get("x-room-passcode");
+  return verifyPasscode(provided ?? "", room.passcodeHash, room.passcodeSalt);
+}

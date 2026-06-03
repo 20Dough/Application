@@ -29,7 +29,11 @@ export async function POST(req: Request, { params }: Params) {
     const { passcode } = await req.json();
     if (!passcode) return badRequest("passcode is required");
 
-    const valid = verifyPasscode(passcode, room.passcodeHash, room.passcodeSalt);
+    const valid = verifyPasscode(
+      passcode,
+      room.passcodeHash,
+      room.passcodeSalt,
+    );
     if (!valid) return forbidden("Incorrect passcode");
 
     return ok({ unlocked: true });
