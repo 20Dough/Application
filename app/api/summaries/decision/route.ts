@@ -16,7 +16,7 @@ import { generateDecisionSummary } from "@/lib/summary/decision-summary";
 export async function POST(req: Request) {
   try {
     const user = await getCurrentUser();
-    const { roomId, title } = await req.json();
+    const { roomId, title, range } = await req.json();
     if (!roomId) return badRequest("roomId is required");
 
     const room = await db.room.findUnique({ where: { id: roomId } });
@@ -26,10 +26,14 @@ export async function POST(req: Request) {
     if (!canSendMessages(role))
       return forbidden("You do not have permission to generate summaries");
 
+    const validRanges = ["recent30", "2h", "1d", "project"] as const;
+    const safeRange = validRanges.includes(range) ? range : "recent30";
+
     const decision = await generateDecisionSummary({
       workspaceId: room.workspaceId,
       roomId,
       title,
+      range: safeRange,
     });
     return ok(serializeDecision(decision), { status: 201 });
   } catch (err) {

@@ -2,16 +2,19 @@
 
 import type {
   Agent,
+  Attachment,
   Decision,
   Invitation,
   MemoryItem,
   Message,
   ProjectContext,
   Room,
+  TokenInfo,
   User,
   Workspace,
   WorkspaceMember,
 } from "@/types";
+import type { SummaryRange } from "@/lib/summary/decision-summary";
 
 export interface BootstrapData {
   currentUser: User;
@@ -36,21 +39,97 @@ export async function fetchBootstrap(): Promise<BootstrapData> {
   return unwrap<BootstrapData>(await fetch("/api/bootstrap"));
 }
 
-export async function fetchMessages(roomId: string): Promise<Message[]> {
+/** Header carrying a room passcode for locked rooms (omitted when none). */
+function passcodeHeader(passcode?: string): Record<string, string> {
+  return passcode ? { "x-room-passcode": passcode } : {};
+}
+
+export async function fetchMessages(
+  roomId: string,
+  passcode?: string,
+): Promise<Message[]> {
   return unwrap<Message[]>(
-    await fetch(`/api/messages?roomId=${encodeURIComponent(roomId)}`),
+    await fetch(`/api/messages?roomId=${encodeURIComponent(roomId)}`, {
+      headers: passcodeHeader(passcode),
+    }),
   );
 }
 
 export async function sendMessage(
   roomId: string,
   content: string,
+  attachmentIds: string[] = [],
+  passcode?: string,
 ): Promise<{ humanMessage: Message; agentMessages: Message[] }> {
   return unwrap(
     await fetch("/api/messages", {
       method: "POST",
+      headers: { "Content-Type": "application/json", ...passcodeHeader(passcode) },
+      body: JSON.stringify({ roomId, content, attachmentIds }),
+    }),
+  );
+}
+
+export async function uploadFile(
+  roomId: string,
+  file: File,
+): Promise<Attachment> {
+  const form = new FormData();
+  form.append("roomId", roomId);
+  form.append("file", file);
+  return unwrap<Attachment>(
+    await fetch("/api/files", { method: "POST", body: form }),
+  );
+}
+
+export async function fetchAttachments(roomId: string): Promise<Attachment[]> {
+  return unwrap<Attachment[]>(
+    await fetch(`/api/files?roomId=${encodeURIComponent(roomId)}`),
+  );
+}
+
+export async function fetchTokens(workspaceId: string): Promise<TokenInfo> {
+  return unwrap<TokenInfo>(
+    await fetch(`/api/tokens?workspaceId=${encodeURIComponent(workspaceId)}`),
+  );
+}
+
+export async function verifyRoomPasscode(
+  roomId: string,
+  passcode: string,
+): Promise<{ unlocked: boolean }> {
+  return postJson(`/api/rooms/${encodeURIComponent(roomId)}/verify`, {
+    passcode,
+  });
+}
+
+export async function setRoomPasscode(
+  roomId: string,
+  passcode: string | null,
+): Promise<Room> {
+  return unwrap<Room>(
+    await fetch(`/api/rooms/${encodeURIComponent(roomId)}`, {
+      method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ roomId, content }),
+      body: JSON.stringify({ passcode }),
+    }),
+  );
+}
+
+export async function updateAgent(
+  agentId: string,
+  patch: Partial<
+    Pick<
+      Agent,
+      "displayName" | "provider" | "model" | "role" | "systemPrompt" | "isActive"
+    >
+  >,
+): Promise<Agent> {
+  return unwrap<Agent>(
+    await fetch(`/api/agents/${encodeURIComponent(agentId)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
     }),
   );
 }
@@ -68,12 +147,15 @@ export async function createRoom(
   );
 }
 
-export async function generateSummary(roomId: string): Promise<Decision> {
+export async function generateSummary(
+  roomId: string,
+  range: SummaryRange = "recent30",
+): Promise<Decision> {
   return unwrap<Decision>(
     await fetch("/api/summaries/decision", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ roomId }),
+      body: JSON.stringify({ roomId, range }),
     }),
   );
 }

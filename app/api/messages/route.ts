@@ -11,6 +11,16 @@ import {
 import { canSendMessages } from "@/lib/permissions";
 import { serializeMessage } from "@/lib/serialize";
 import { routeMessage } from "@/lib/ai/ai-router";
+import { verifyPasscode } from "@/lib/rooms/passcode";
+
+type LockedRoom = { passcodeHash: string | null; passcodeSalt: string | null };
+
+/** Enforce a room passcode (sent via the x-room-passcode header) when set. */
+function passcodeOk(room: LockedRoom, req: Request): boolean {
+  if (!room.passcodeHash) return true;
+  const provided = req.headers.get("x-room-passcode");
+  return verifyPasscode(provided ?? "", room.passcodeHash, room.passcodeSalt);
+}
 
 // GET /api/messages?roomId=
 export async function GET(req: Request) {
@@ -24,6 +34,7 @@ export async function GET(req: Request) {
 
     const role = await requireMembership(user.id, room.workspaceId);
     if (!role) return forbidden("Not a member of this workspace");
+    if (!passcodeOk(room, req)) return forbidden("Room is locked");
 
     const messages = await db.message.findMany({
       where: { roomId },
@@ -42,7 +53,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const user = await getCurrentUser();
-    const { roomId, content } = await req.json();
+    const { roomId, content, attachmentIds } = await req.json();
     if (!roomId || !content?.trim())
       return badRequest("roomId and content are required");
 
@@ -53,11 +64,13 @@ export async function POST(req: Request) {
     if (!role) return forbidden("Not a member of this workspace");
     if (!canSendMessages(role))
       return forbidden("Viewers cannot send messages");
+    if (!passcodeOk(room, req)) return forbidden("Room is locked");
 
     const result = await routeMessage({
       roomId,
       userId: user.id,
       content: content.trim(),
+      attachmentIds: Array.isArray(attachmentIds) ? attachmentIds : [],
     });
     return ok(result, { status: 201 });
   } catch (err) {

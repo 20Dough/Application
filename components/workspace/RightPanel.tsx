@@ -1,28 +1,43 @@
 "use client";
 
 import { useState } from "react";
-import type { Agent, Decision, MemoryItem, ProjectContext } from "@/types";
+import type {
+  Agent,
+  Decision,
+  MemoryItem,
+  ProjectContext,
+  TokenInfo,
+} from "@/types";
 import { cn } from "@/lib/utils";
-import { AgentList } from "@/components/agents/AgentList";
+import { AgentEditor } from "@/components/agents/AgentEditor";
 import { InlineAddForm } from "@/components/workspace/InlineAddForm";
+import { TokenPanel } from "@/components/workspace/TokenPanel";
 
 interface RightPanelProps {
   agents: Agent[];
   projectContext: ProjectContext[];
   memory: MemoryItem[];
   decisions: Decision[];
+  tokens: TokenInfo | null;
   canManage: boolean;
   onAddMemory: (title: string, content: string) => Promise<void>;
   onAddContext: (title: string, content: string) => Promise<void>;
+  onUpdateAgent: (
+    agentId: string,
+    patch: Partial<
+      Pick<Agent, "displayName" | "provider" | "model" | "role" | "isActive">
+    >,
+  ) => Promise<void>;
 }
 
-type Tab = "agents" | "context" | "memory" | "decisions";
+type Tab = "agents" | "context" | "memory" | "decisions" | "tokens";
 
 const tabs: { id: Tab; label: string }[] = [
   { id: "agents", label: "Agents" },
   { id: "context", label: "Context" },
   { id: "memory", label: "Memory" },
   { id: "decisions", label: "Decisions" },
+  { id: "tokens", label: "Tokens" },
 ];
 
 export function RightPanel({
@@ -30,9 +45,11 @@ export function RightPanel({
   projectContext,
   memory,
   decisions,
+  tokens,
   canManage,
   onAddMemory,
   onAddContext,
+  onUpdateAgent,
 }: RightPanelProps) {
   const [tab, setTab] = useState<Tab>("agents");
 
@@ -60,7 +77,17 @@ export function RightPanel({
       <div className="flex-1 overflow-y-auto p-3">
         {tab === "agents" && (
           <Section title="AI Agents">
-            <AgentList agents={agents} />
+            <AgentEditor
+              agents={agents}
+              canManage={canManage}
+              onUpdate={onUpdateAgent}
+            />
+          </Section>
+        )}
+
+        {tab === "tokens" && (
+          <Section title="Token Usage">
+            <TokenPanel tokens={tokens} />
           </Section>
         )}
 

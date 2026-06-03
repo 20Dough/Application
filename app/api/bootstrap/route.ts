@@ -51,14 +51,16 @@ export async function GET() {
         }),
       ]);
 
+    // Preload the first room's messages, but never auto-open a locked room.
     const firstRoom = rooms[0];
-    const messages = firstRoom
-      ? await db.message.findMany({
-          where: { roomId: firstRoom.id },
-          orderBy: { createdAt: "asc" },
-          include: { user: true, agent: true },
-        })
-      : [];
+    const messages =
+      firstRoom && !firstRoom.passcodeHash
+        ? await db.message.findMany({
+            where: { roomId: firstRoom.id },
+            orderBy: { createdAt: "asc" },
+            include: { user: true, agent: true },
+          })
+        : [];
 
     return ok({
       currentUser: serializeUser(user),

@@ -47,6 +47,7 @@ export async function POST(req: Request) {
         name: name.trim(),
         description: description?.trim() || null,
         defaultAgentId: defaultAgentId || null,
+        createdById: user.id,
       },
     });
     return ok(serializeRoom(room), { status: 201 });

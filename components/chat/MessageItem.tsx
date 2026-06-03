@@ -1,14 +1,15 @@
 "use client";
 
-import type { Agent, Message } from "@/types";
+import type { Agent, Attachment, Message } from "@/types";
 import { cn, formatTime, initials, providerColor } from "@/lib/utils";
 
 interface MessageItemProps {
   message: Message;
   agent?: Agent;
+  attachments?: Attachment[];
 }
 
-export function MessageItem({ message, agent }: MessageItemProps) {
+export function MessageItem({ message, agent, attachments }: MessageItemProps) {
   // System messages render as a centered subtle notice.
   if (message.senderType === "system") {
     return (
@@ -54,6 +55,11 @@ export function MessageItem({ message, agent }: MessageItemProps) {
               {message.metadata?.model ?? agent?.model}
             </span>
           )}
+          {isAgent && message.metadata?.usedWebSearch && (
+            <span className="text-[11px] text-hive-muted/70" title="Used web search">
+              🔎
+            </span>
+          )}
         </div>
         <p
           className={cn(
@@ -62,6 +68,32 @@ export function MessageItem({ message, agent }: MessageItemProps) {
         >
           {renderWithMentions(message.content)}
         </p>
+
+        {/* Attachments */}
+        {attachments && attachments.length > 0 && (
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {attachments.map((a) => (
+              <span
+                key={a.id}
+                className="rounded-md border border-hive-border bg-hive-panel px-2 py-0.5 text-[11px] text-hive-text"
+              >
+                📎 {a.name}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* AI selection + token footnote */}
+        {isAgent && message.metadata?.outputTokens != null && (
+          <div className="mt-1 text-[10px] text-hive-muted/60">
+            {message.metadata.selectedBy &&
+              message.metadata.selectedBy.startsWith("selector") &&
+              "auto-routed · "}
+            {(message.metadata.inputTokens ?? 0) +
+              (message.metadata.outputTokens ?? 0)}{" "}
+            tokens
+          </div>
+        )}
       </div>
     </div>
   );

@@ -7,8 +7,9 @@ import {
   serverError,
   requireMembership,
 } from "@/lib/api";
-import { canManageWorkspace } from "@/lib/permissions";
+import { canManageWorkspace, getMemberRole } from "@/lib/permissions";
 import { serializeRoom } from "@/lib/serialize";
+import { hashPasscode } from "@/lib/rooms/passcode";
 
 type Params = { params: Promise<{ roomId: string }> };
 
@@ -41,7 +42,26 @@ export async function PATCH(req: Request, { params }: Params) {
     if (!canManageWorkspace(role))
       return forbidden("Only admins/owners can update rooms");
 
-    const { name, description, defaultAgentId } = await req.json();
+    const { name, description, defaultAgentId, passcode } = await req.json();
+
+    // Passcode changes are restricted to the room's creator (or, if the room
+    // predates creator tracking, the workspace owner).
+    let passcodeData: { passcodeHash: string | null; passcodeSalt: string | null } | undefined;
+    if (passcode !== undefined) {
+      const isCreator = room.createdById
+        ? room.createdById === user.id
+        : (await getMemberRole(user.id, room.workspaceId)) === "owner";
+      if (!isCreator)
+        return forbidden("Only the room creator can set the passcode");
+
+      if (passcode === null || passcode === "") {
+        passcodeData = { passcodeHash: null, passcodeSalt: null };
+      } else {
+        const { hash, salt } = hashPasscode(String(passcode));
+        passcodeData = { passcodeHash: hash, passcodeSalt: salt };
+      }
+    }
+
     const updated = await db.room.update({
       where: { id: roomId },
       data: {
@@ -52,6 +72,7 @@ export async function PATCH(req: Request, { params }: Params) {
         ...(defaultAgentId !== undefined
           ? { defaultAgentId: defaultAgentId || null }
           : {}),
+        ...(passcodeData ?? {}),
       },
     });
     return ok(serializeRoom(updated));

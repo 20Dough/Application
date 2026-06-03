@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import type { Room, Workspace, WorkspaceMember } from "@/types";
 import { cn, initials } from "@/lib/utils";
 
@@ -27,6 +28,23 @@ export function Sidebar({
   onSelectRoom,
   onCreateRoom,
 }: SidebarProps) {
+  const [query, setQuery] = useState("");
+
+  const q = query.trim().toLowerCase();
+  const filteredRooms = useMemo(
+    () => (q ? rooms.filter((r) => r.name.toLowerCase().includes(q)) : rooms),
+    [rooms, q],
+  );
+  const filteredMembers = useMemo(
+    () =>
+      q
+        ? members.filter((m) =>
+            (m.user?.name ?? "").toLowerCase().includes(q),
+          )
+        : members,
+    [members, q],
+  );
+
   return (
     <aside className="flex h-full w-64 flex-col border-r border-hive-border bg-hive-surface">
       {/* Workspace header */}
@@ -40,6 +58,16 @@ export function Sidebar({
           </h1>
           <p className="truncate text-xs text-hive-muted">Workspace</p>
         </div>
+      </div>
+
+      {/* Search rooms / people */}
+      <div className="px-3 pt-3">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search rooms or people…"
+          className="w-full rounded-md border border-hive-border bg-hive-panel px-2.5 py-1.5 text-xs text-hive-text placeholder:text-hive-muted focus:border-hive-accent focus:outline-none"
+        />
       </div>
 
       {/* Rooms */}
@@ -58,7 +86,10 @@ export function Sidebar({
           </button>
         </div>
         <nav className="space-y-0.5">
-          {rooms.map((room) => (
+          {filteredRooms.length === 0 && (
+            <p className="px-2 py-1 text-xs text-hive-muted">No rooms match.</p>
+          )}
+          {filteredRooms.map((room) => (
             <button
               key={room.id}
               type="button"
@@ -70,7 +101,7 @@ export function Sidebar({
                   : "text-hive-muted hover:bg-hive-panel/60 hover:text-hive-text",
               )}
             >
-              <span className="text-hive-muted">#</span>
+              <span className="text-hive-muted">{room.isLocked ? "🔒" : "#"}</span>
               <span className="truncate">{room.name}</span>
             </button>
           ))}
@@ -83,7 +114,12 @@ export function Sidebar({
           Team Members
         </div>
         <ul className="space-y-1">
-          {members.map((member) => (
+          {filteredMembers.length === 0 && (
+            <li className="px-2 py-1 text-xs text-hive-muted">
+              No people match.
+            </li>
+          )}
+          {filteredMembers.map((member) => (
             <li
               key={member.id}
               className="flex items-center gap-2 rounded-md px-2 py-1"

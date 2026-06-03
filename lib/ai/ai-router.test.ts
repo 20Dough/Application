@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { selectAgents, type SelectableAgent } from "@/lib/ai/ai-router";
+import {
+  selectAgents,
+  cheapestAgent,
+  applyExhaustionFallback,
+  type SelectableAgent,
+} from "@/lib/ai/ai-router";
 
 function agent(
   id: string,
@@ -86,5 +91,44 @@ describe("selectAgents", () => {
       defaultAgentId: null,
     });
     expect(result.map((a) => a.id)).toEqual(["a_ari"]);
+  });
+});
+
+describe("cheapestAgent", () => {
+  it("picks the agent running the cheapest model", () => {
+    const opus = agent("a_opus", "opus", { model: "claude-opus-4-8" });
+    const haiku = agent("a_haiku", "haiku", {
+      model: "claude-haiku-4-5-20251001",
+    });
+    expect(cheapestAgent([opus, haiku]).id).toBe("a_haiku");
+  });
+});
+
+describe("applyExhaustionFallback", () => {
+  const opus = agent("a_opus", "opus", { model: "claude-opus-4-8" });
+  const mini = agent("a_mini", "mini", { model: "gpt-4o-mini" });
+
+  it("keeps the agent when its model is not exhausted", () => {
+    const plan = applyExhaustionFallback([opus], [opus, mini], new Set());
+    expect(plan).toEqual([{ agent: opus }]);
+  });
+
+  it("swaps to the cheapest open model when the target is exhausted", () => {
+    const plan = applyExhaustionFallback(
+      [opus],
+      [opus, mini],
+      new Set(["claude-opus-4-8"]),
+    );
+    expect(plan[0].agent.id).toBe("a_mini");
+    expect(plan[0].replacedFrom?.id).toBe("a_opus");
+  });
+
+  it("flags exhaustion when no replacement model is available", () => {
+    const plan = applyExhaustionFallback(
+      [opus],
+      [opus],
+      new Set(["claude-opus-4-8"]),
+    );
+    expect(plan[0].exhaustedNoRepl).toBe(true);
   });
 });

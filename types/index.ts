@@ -53,6 +53,9 @@ export interface Room {
   name: string;
   description?: string | null;
   defaultAgentId?: string | null;
+  createdById?: string | null;
+  /** True when the room is passcode-protected. The hash itself is never sent. */
+  isLocked: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -96,6 +99,57 @@ export interface MessageMetadata {
   triggeredByMessageId?: string;
   autoInvoked?: boolean;
   mentionType?: "human-to-ai" | "human-to-human" | "ai-to-human" | "ai-to-ai";
+  /** How the responding agent was chosen when no explicit @mention was given. */
+  selectedBy?: string;
+  /** Token usage for this AI response. */
+  inputTokens?: number;
+  outputTokens?: number;
+  /** Whether a web search was run to help answer. */
+  usedWebSearch?: boolean;
+  /** Attachment ids referenced by a human message. */
+  attachmentIds?: string[];
+}
+
+export interface Attachment {
+  id: string;
+  roomId: string;
+  messageId?: string | null;
+  name: string;
+  mimeType: string;
+  size: number;
+  /** Parsed text content (may be truncated for display). */
+  extractedText?: string;
+  createdAt: string;
+}
+
+// --- Token budget (shared workspace pool) ---
+
+export interface ModelUsage {
+  provider: ProviderName;
+  model: string;
+  label: string;
+  used: number;
+  limit: number;
+  exhausted: boolean;
+}
+
+export interface WorkspaceBudget {
+  workspaceId: string;
+  limit: number;
+  used: number;
+  remaining: number;
+  perModel: ModelUsage[];
+}
+
+export interface AppTokenStats {
+  totalUsed: number;
+  workspaceCount: number;
+  averagePerWorkspace: number;
+}
+
+export interface TokenInfo {
+  workspace: WorkspaceBudget;
+  app: AppTokenStats;
 }
 
 export interface Message {
