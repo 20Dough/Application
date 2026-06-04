@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { ok, serverError } from "@/lib/api";
+import { ok, unauthorized, handleError } from "@/lib/api";
 import { ensureDefaultWorkspace } from "@/lib/bootstrap";
 import {
   serializeAgent,
@@ -19,6 +19,7 @@ import {
 export async function GET() {
   try {
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const workspace = await ensureDefaultWorkspace(user.id);
     const workspaceId = workspace.id;
 
@@ -51,14 +52,16 @@ export async function GET() {
         }),
       ]);
 
+    // Preload the first room's messages, but never auto-open a locked room.
     const firstRoom = rooms[0];
-    const messages = firstRoom
-      ? await db.message.findMany({
-          where: { roomId: firstRoom.id },
-          orderBy: { createdAt: "asc" },
-          include: { user: true, agent: true },
-        })
-      : [];
+    const messages =
+      firstRoom && !firstRoom.passcodeHash
+        ? await db.message.findMany({
+            where: { roomId: firstRoom.id },
+            orderBy: { createdAt: "asc" },
+            include: { user: true, agent: true },
+          })
+        : [];
 
     return ok({
       currentUser: serializeUser(user),
@@ -73,7 +76,6 @@ export async function GET() {
       messages: messages.map(serializeMessage),
     });
   } catch (err) {
-    console.error("[GET /api/bootstrap]", err);
-    return serverError();
+    return handleError("GET /api/bootstrap", err);
   }
 }

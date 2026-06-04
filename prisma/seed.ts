@@ -1,17 +1,30 @@
-// Seed script — creates the canonical initial HiveMind team described in
-// PROJECT_VISION.md: founder Van, with default agents ARi (OpenAI) and
-// Cloudy (Anthropic). Run with: npm run db:seed
+// Seed script — creates a demo workspace with the default agents ARi (OpenAI)
+// and Cloudy (Anthropic), owned by a demo account you can sign in with.
+// Run with: npm run db:seed
 
 import { PrismaClient } from "@prisma/client";
+import { randomBytes, scryptSync } from "crypto";
 
 const db = new PrismaClient();
 
+// Mirror lib/crypto.ts (the seed can't import "@/..." path aliases).
+function hashSecret(secret: string) {
+  const salt = randomBytes(16).toString("hex");
+  const hash = scryptSync(secret, salt, 64).toString("hex");
+  return { hash, salt };
+}
+
 async function main() {
-  // Founder
-  const van = await db.user.upsert({
-    where: { email: "van@hivemind.dev" },
-    update: {},
-    create: { email: "van@hivemind.dev", name: "Van" },
+  // Demo account — seeded with a dev password so you can log in immediately.
+  const email = process.env.SEED_EMAIL ?? "demo@hivemind.dev";
+  const name = process.env.SEED_NAME ?? "Demo";
+  const password = process.env.SEED_PASSWORD ?? "password";
+  const { hash, salt } = hashSecret(password);
+
+  const owner = await db.user.upsert({
+    where: { email },
+    update: { passwordHash: hash, passwordSalt: salt },
+    create: { email, name, passwordHash: hash, passwordSalt: salt },
   });
 
   // Workspace
@@ -23,16 +36,16 @@ async function main() {
       name: "AI Team Up",
       description:
         "Building HiveMind — a human + AI team collaboration workspace.",
-      ownerId: van.id,
+      ownerId: owner.id,
     },
   });
 
   await db.workspaceMember.upsert({
     where: {
-      userId_workspaceId: { userId: van.id, workspaceId: workspace.id },
+      userId_workspaceId: { userId: owner.id, workspaceId: workspace.id },
     },
     update: {},
-    create: { userId: van.id, workspaceId: workspace.id, role: "owner" },
+    create: { userId: owner.id, workspaceId: workspace.id, role: "owner" },
   });
 
   // Default agents
@@ -45,9 +58,9 @@ async function main() {
       displayName: "ARi",
       provider: "openai",
       model: "gpt-4o",
-      role: "System Architect / Programmer",
+      role: "Deep Reasoning / Review Partner",
       systemPrompt:
-        "You are ARi, an AI system architect and programmer inside HiveMind. You represent the OpenAI / ChatGPT side of the team. You help users design systems, write code, debug, plan architecture, and turn ideas into working products. Be direct, practical, structured, and implementation-focused. You work well with Cloudy.",
+        "You are ARi, a deep reasoning AI collaborator inside HiveMind. You represent the OpenAI / ChatGPT side of the team. You review ideas, detect weaknesses, improve logic, refine plans, and explain complex systems clearly. You are careful, structured, and thoughtful. You work well with Cloudy.",
       isActive: true,
     },
   });
@@ -61,9 +74,9 @@ async function main() {
       displayName: "Cloudy",
       provider: "anthropic",
       model: "claude-sonnet-4-6",
-      role: "Deep Reasoning / Review Partner",
+      role: "System Architect / Programmer",
       systemPrompt:
-        "You are Cloudy, a deep reasoning AI collaborator inside HiveMind. You represent the Claude AI / Anthropic side of the team. You review ideas, detect weaknesses, improve logic, refine plans, and explain complex systems clearly. You are careful, structured, and thoughtful. You work well with ARi.",
+        "You are Cloudy, an AI system architect and programmer inside HiveMind. You represent the Claude AI / Anthropic side of the team. You help users design systems, write code, debug, plan architecture, and turn ideas into working products. Be direct, practical, structured, and implementation-focused. You work well with ARi.",
       isActive: true,
     },
   });
@@ -78,6 +91,7 @@ async function main() {
       name: "App Development",
       description: "Designing and building the HiveMind MVP.",
       defaultAgentId: ari.id,
+      createdById: owner.id,
     },
   });
 
@@ -108,7 +122,7 @@ async function main() {
     },
   });
 
-  console.log("✅ Seed complete: Van + ARi + Cloudy in 'AI Team Up'.");
+  console.log(`✅ Seed complete: ${name} + ARi + Cloudy in 'AI Team Up'.`);
 }
 
 main()

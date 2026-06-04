@@ -11,7 +11,7 @@ export interface MentionableAgent {
 }
 
 // The leading (?<!\w) negative lookbehind requires the @ to NOT follow a word
-// character, so emails like "van@example.com" are not treated as mentions while
+// character, so emails like "user@example.com" are not treated as mentions while
 // "@ARi", "hey @Cloudy", and "(@Researcher)" still match.
 const MENTION_REGEX = /(?<!\w)@([a-zA-Z0-9_-]+)/g;
 

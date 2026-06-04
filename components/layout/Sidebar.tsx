@@ -1,15 +1,21 @@
 "use client";
 
-import type { Room, Workspace, WorkspaceMember } from "@/types";
+import { useMemo, useState } from "react";
+import type { Room, User, Workspace, WorkspaceMember } from "@/types";
 import { cn, initials } from "@/lib/utils";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 interface SidebarProps {
   workspace: Workspace;
   rooms: Room[];
   members: WorkspaceMember[];
+  currentUser: User | null;
   activeRoomId: string;
   onSelectRoom: (roomId: string) => void;
   onCreateRoom: () => void;
+  onLogout: () => void;
+  /** Close the mobile drawer (only rendered on small screens). */
+  onClose?: () => void;
 }
 
 const roleBadge: Record<string, string> = {
@@ -23,10 +29,28 @@ export function Sidebar({
   workspace,
   rooms,
   members,
+  currentUser,
   activeRoomId,
   onSelectRoom,
   onCreateRoom,
+  onLogout,
+  onClose,
 }: SidebarProps) {
+  const [query, setQuery] = useState("");
+
+  const q = query.trim().toLowerCase();
+  const filteredRooms = useMemo(
+    () => (q ? rooms.filter((r) => r.name.toLowerCase().includes(q)) : rooms),
+    [rooms, q],
+  );
+  const filteredMembers = useMemo(
+    () =>
+      q
+        ? members.filter((m) => (m.user?.name ?? "").toLowerCase().includes(q))
+        : members,
+    [members, q],
+  );
+
   return (
     <aside className="flex h-full w-64 flex-col border-r border-hive-border bg-hive-surface">
       {/* Workspace header */}
@@ -34,12 +58,32 @@ export function Sidebar({
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-hive-accent text-sm font-bold text-black">
           🐝
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h1 className="truncate text-sm font-semibold text-hive-text">
             {workspace.name}
           </h1>
           <p className="truncate text-xs text-hive-muted">Workspace</p>
         </div>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            title="Close menu"
+            className="flex h-7 w-7 items-center justify-center rounded text-hive-muted transition hover:bg-hive-panel hover:text-hive-text lg:hidden"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+
+      {/* Search rooms / people */}
+      <div className="px-3 pt-3">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search rooms or people…"
+          className="w-full rounded-md border border-hive-border bg-hive-panel px-2.5 py-1.5 text-xs text-hive-text placeholder:text-hive-muted focus:border-hive-accent focus:outline-none"
+        />
       </div>
 
       {/* Rooms */}
@@ -58,7 +102,10 @@ export function Sidebar({
           </button>
         </div>
         <nav className="space-y-0.5">
-          {rooms.map((room) => (
+          {filteredRooms.length === 0 && (
+            <p className="px-2 py-1 text-xs text-hive-muted">No rooms match.</p>
+          )}
+          {filteredRooms.map((room) => (
             <button
               key={room.id}
               type="button"
@@ -70,7 +117,9 @@ export function Sidebar({
                   : "text-hive-muted hover:bg-hive-panel/60 hover:text-hive-text",
               )}
             >
-              <span className="text-hive-muted">#</span>
+              <span className="text-hive-muted">
+                {room.isLocked ? "🔒" : "#"}
+              </span>
               <span className="truncate">{room.name}</span>
             </button>
           ))}
@@ -83,7 +132,12 @@ export function Sidebar({
           Team Members
         </div>
         <ul className="space-y-1">
-          {members.map((member) => (
+          {filteredMembers.length === 0 && (
+            <li className="px-2 py-1 text-xs text-hive-muted">
+              No people match.
+            </li>
+          )}
+          {filteredMembers.map((member) => (
             <li
               key={member.id}
               className="flex items-center gap-2 rounded-md px-2 py-1"
@@ -106,6 +160,38 @@ export function Sidebar({
             </li>
           ))}
         </ul>
+      </div>
+
+      {/* Theme + signed-in user */}
+      <div className="space-y-2 border-t border-hive-border px-3 py-3">
+        <div className="flex items-center justify-between">
+          <ThemeToggle />
+          {currentUser && (
+            <button
+              type="button"
+              onClick={onLogout}
+              title="Sign out"
+              className="rounded px-1.5 py-1 text-[11px] text-hive-muted transition hover:text-hive-accent"
+            >
+              Sign out
+            </button>
+          )}
+        </div>
+        {currentUser && (
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-hive-accent text-[10px] font-semibold text-black">
+              {initials(currentUser.name)}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-medium text-hive-text">
+                {currentUser.name}
+              </p>
+              <p className="truncate text-[10px] text-hive-muted">
+                {currentUser.email}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </aside>
   );

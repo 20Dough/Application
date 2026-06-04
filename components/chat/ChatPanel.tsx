@@ -1,7 +1,12 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import type { Agent, Message, Room } from "@/types";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { Agent, Attachment, Message, Room } from "@/types";
+import {
+  SUMMARY_RANGES,
+  SUMMARY_RANGE_LABELS,
+  type SummaryRange,
+} from "@/lib/summary/decision-summary";
 import { MessageItem } from "./MessageItem";
 import { MessageInput } from "./MessageInput";
 
@@ -9,21 +14,52 @@ interface ChatPanelProps {
   room: Room;
   messages: Message[];
   agents: Agent[];
+  attachments: Attachment[];
+  currentUserId?: string;
   sending?: boolean;
-  onSend: (content: string) => void;
-  onGenerateSummary?: () => void;
+  onSend: (content: string, attachmentIds: string[]) => void;
+  onUploadFile: (file: File) => Promise<Attachment>;
+  onGenerateSummary?: (range: SummaryRange) => void;
+  onSetPasscode?: () => void;
 }
+
+const SUMMARY_OPTIONS = SUMMARY_RANGES.map((range) => ({
+  range,
+  label: SUMMARY_RANGE_LABELS[range],
+}));
 
 export function ChatPanel({
   room,
   messages,
   agents,
+  attachments,
+  currentUserId,
   sending,
   onSend,
+  onUploadFile,
   onGenerateSummary,
+  onSetPasscode,
 }: ChatPanelProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
-  const agentsById = new Map(agents.map((a) => [a.id, a]));
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const agentsById = useMemo(
+    () => new Map(agents.map((a) => [a.id, a])),
+    [agents],
+  );
+  const attachmentsByMessage = useMemo(() => {
+    const map = new Map<string, Attachment[]>();
+    for (const a of attachments) {
+      if (!a.messageId) continue;
+      const list = map.get(a.messageId) ?? [];
+      list.push(a);
+      map.set(a.messageId, list);
+    }
+    return map;
+  }, [attachments]);
+
+  const isCreator = Boolean(
+    currentUserId && room.createdById === currentUserId,
+  );
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -33,21 +69,51 @@ export function ChatPanel({
     <section className="flex h-full flex-1 flex-col bg-hive-bg">
       {/* Room header */}
       <header className="flex items-center gap-3 border-b border-hive-border px-4 py-3">
-        <span className="text-hive-muted">#</span>
+        <span className="text-hive-muted">{room.isLocked ? "🔒" : "#"}</span>
         <div className="flex-1">
           <h2 className="text-sm font-semibold text-hive-text">{room.name}</h2>
           {room.description && (
             <p className="text-xs text-hive-muted">{room.description}</p>
           )}
         </div>
-        {onGenerateSummary && (
+
+        {isCreator && onSetPasscode && (
           <button
             type="button"
-            onClick={onGenerateSummary}
+            onClick={onSetPasscode}
             className="rounded-md border border-hive-border px-2.5 py-1 text-xs text-hive-muted transition hover:border-hive-accent hover:text-hive-accent"
           >
-            ✦ Summarize
+            {room.isLocked ? "🔒 Passcode" : "🔓 Set passcode"}
           </button>
+        )}
+
+        {onGenerateSummary && (
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setSummaryOpen((o) => !o)}
+              className="rounded-md border border-hive-border px-2.5 py-1 text-xs text-hive-muted transition hover:border-hive-accent hover:text-hive-accent"
+            >
+              ✦ Summarize ▾
+            </button>
+            {summaryOpen && (
+              <div className="absolute right-0 z-10 mt-1 w-44 overflow-hidden rounded-md border border-hive-border bg-hive-panel shadow-lg">
+                {SUMMARY_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.range}
+                    type="button"
+                    onClick={() => {
+                      setSummaryOpen(false);
+                      onGenerateSummary(opt.range);
+                    }}
+                    className="block w-full px-3 py-2 text-left text-xs text-hive-text transition hover:bg-hive-surface"
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </header>
 
@@ -65,6 +131,7 @@ export function ChatPanel({
               agent={
                 message.agentId ? agentsById.get(message.agentId) : undefined
               }
+              attachments={attachmentsByMessage.get(message.id)}
             />
           ))
         )}
@@ -82,6 +149,7 @@ export function ChatPanel({
         agents={agents}
         disabled={sending}
         onSend={onSend}
+        onUploadFile={onUploadFile}
       />
     </section>
   );

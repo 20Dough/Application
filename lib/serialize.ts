@@ -5,6 +5,7 @@
 
 import type {
   Agent,
+  Attachment,
   Decision,
   Invitation,
   MemoryItem,
@@ -42,10 +43,20 @@ type RawUser = {
   avatarUrl: string | null;
   createdAt: Date;
   updatedAt: Date;
+  // May be present on the Prisma row — explicitly NOT forwarded to the client.
+  passwordHash?: string | null;
+  passwordSalt?: string | null;
 };
 
 export function serializeUser(u: RawUser): User {
-  return { ...u, createdAt: iso(u.createdAt), updatedAt: iso(u.updatedAt) };
+  return {
+    id: u.id,
+    email: u.email,
+    name: u.name,
+    avatarUrl: u.avatarUrl ?? null,
+    createdAt: iso(u.createdAt),
+    updatedAt: iso(u.updatedAt),
+  };
 }
 
 type RawWorkspace = {
@@ -85,12 +96,25 @@ type RawRoom = {
   name: string;
   description: string | null;
   defaultAgentId: string | null;
+  createdById?: string | null;
+  passcodeHash?: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
 
 export function serializeRoom(r: RawRoom): Room {
-  return { ...r, createdAt: iso(r.createdAt), updatedAt: iso(r.updatedAt) };
+  // Never leak the passcode hash to the client — only whether the room is locked.
+  return {
+    id: r.id,
+    workspaceId: r.workspaceId,
+    name: r.name,
+    description: r.description,
+    defaultAgentId: r.defaultAgentId,
+    createdById: r.createdById ?? null,
+    isLocked: Boolean(r.passcodeHash),
+    createdAt: iso(r.createdAt),
+    updatedAt: iso(r.updatedAt),
+  };
 }
 
 type RawAgent = {
@@ -212,6 +236,33 @@ export function serializeInvitation(i: RawInvitation): Invitation {
     role: i.role as Invitation["role"],
     status: i.status as Invitation["status"],
     createdAt: iso(i.createdAt),
+  };
+}
+
+type RawAttachment = {
+  id: string;
+  roomId: string;
+  messageId: string | null;
+  name: string;
+  mimeType: string;
+  size: number;
+  extractedText?: string;
+  createdAt: Date;
+};
+
+export function serializeAttachment(
+  a: RawAttachment,
+  includeText = false,
+): Attachment {
+  return {
+    id: a.id,
+    roomId: a.roomId,
+    messageId: a.messageId,
+    name: a.name,
+    mimeType: a.mimeType,
+    size: a.size,
+    ...(includeText ? { extractedText: a.extractedText } : {}),
+    createdAt: iso(a.createdAt),
   };
 }
 

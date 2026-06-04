@@ -4,8 +4,9 @@ import {
   ok,
   badRequest,
   forbidden,
-  serverError,
   requireMembership,
+  unauthorized,
+  handleError,
 } from "@/lib/api";
 import { canManageWorkspace } from "@/lib/permissions";
 import { serializeProjectContext } from "@/lib/serialize";
@@ -14,6 +15,7 @@ import { serializeProjectContext } from "@/lib/serialize";
 export async function GET(req: Request) {
   try {
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const workspaceId = new URL(req.url).searchParams.get("workspaceId");
     if (!workspaceId) return badRequest("workspaceId is required");
 
@@ -26,8 +28,7 @@ export async function GET(req: Request) {
     });
     return ok(items.map(serializeProjectContext));
   } catch (err) {
-    console.error("[GET /api/project-context]", err);
-    return serverError();
+    return handleError("GET /api/project-context", err);
   }
 }
 
@@ -35,6 +36,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const { workspaceId, title, content } = await req.json();
     if (!workspaceId || !title?.trim() || !content?.trim())
       return badRequest("workspaceId, title and content are required");
@@ -48,7 +50,6 @@ export async function POST(req: Request) {
     });
     return ok(serializeProjectContext(item), { status: 201 });
   } catch (err) {
-    console.error("[POST /api/project-context]", err);
-    return serverError();
+    return handleError("POST /api/project-context", err);
   }
 }

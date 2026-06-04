@@ -1,0 +1,25 @@
+# Local PostgreSQL for development + tests.
+#   docker compose up -d db        # start Postgres
+#   npm run db:deploy              # apply migrations
+#   npm run db:seed                # (optional) seed the demo workspace
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: hivemind
+    ports:
+      - "5432:5432"
+    volumes:
+      - hivemind_pgdata:/var/lib/postgresql/data
+      - ./docker/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  hivemind_pgdata:

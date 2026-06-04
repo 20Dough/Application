@@ -9,16 +9,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // HiveMind dark workspace palette
+        // Theme-aware workspace palette (CSS variables defined in globals.css;
+        // RGB channels so opacity modifiers like `text-hive-text/80` work).
         hive: {
-          bg: "#0d1117",
-          surface: "#161b22",
-          panel: "#1c2128",
-          border: "#30363d",
-          muted: "#8b949e",
-          text: "#e6edf3",
-          accent: "#f5a623",
-          "accent-soft": "#3b2f14",
+          bg: "rgb(var(--hive-bg) / <alpha-value>)",
+          surface: "rgb(var(--hive-surface) / <alpha-value>)",
+          panel: "rgb(var(--hive-panel) / <alpha-value>)",
+          border: "rgb(var(--hive-border) / <alpha-value>)",
+          muted: "rgb(var(--hive-muted) / <alpha-value>)",
+          text: "rgb(var(--hive-text) / <alpha-value>)",
+          accent: "rgb(var(--hive-accent) / <alpha-value>)",
+          "accent-soft": "rgb(var(--hive-accent-soft) / <alpha-value>)",
         },
         agent: {
           ari: "#10a37f",

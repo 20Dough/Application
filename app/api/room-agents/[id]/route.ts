@@ -4,8 +4,9 @@ import {
   ok,
   forbidden,
   notFound,
-  serverError,
   requireMembership,
+  unauthorized,
+  handleError,
 } from "@/lib/api";
 import { canManageWorkspace } from "@/lib/permissions";
 
@@ -16,6 +17,7 @@ export async function DELETE(_req: Request, { params }: Params) {
   try {
     const { id } = await params;
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const roomAgent = await db.roomAgent.findUnique({
       where: { id },
       include: { room: true },
@@ -29,7 +31,6 @@ export async function DELETE(_req: Request, { params }: Params) {
     await db.roomAgent.delete({ where: { id } });
     return ok({ deleted: true });
   } catch (err) {
-    console.error("[DELETE /api/room-agents/:id]", err);
-    return serverError();
+    return handleError("DELETE /api/room-agents/:id", err);
   }
 }

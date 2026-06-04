@@ -4,8 +4,9 @@ import {
   ok,
   badRequest,
   forbidden,
-  serverError,
   requireMembership,
+  unauthorized,
+  handleError,
 } from "@/lib/api";
 import { serializeRoom } from "@/lib/serialize";
 
@@ -13,6 +14,7 @@ import { serializeRoom } from "@/lib/serialize";
 export async function GET(req: Request) {
   try {
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const workspaceId = new URL(req.url).searchParams.get("workspaceId");
     if (!workspaceId) return badRequest("workspaceId is required");
 
@@ -25,8 +27,7 @@ export async function GET(req: Request) {
     });
     return ok(rooms.map(serializeRoom));
   } catch (err) {
-    console.error("[GET /api/rooms]", err);
-    return serverError();
+    return handleError("GET /api/rooms", err);
   }
 }
 
@@ -34,6 +35,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const { workspaceId, name, description, defaultAgentId } = await req.json();
     if (!workspaceId || !name?.trim())
       return badRequest("workspaceId and name are required");
@@ -47,11 +49,11 @@ export async function POST(req: Request) {
         name: name.trim(),
         description: description?.trim() || null,
         defaultAgentId: defaultAgentId || null,
+        createdById: user.id,
       },
     });
     return ok(serializeRoom(room), { status: 201 });
   } catch (err) {
-    console.error("[POST /api/rooms]", err);
-    return serverError();
+    return handleError("POST /api/rooms", err);
   }
 }

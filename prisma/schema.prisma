@@ -1,13 +1,14 @@
 // HiveMind — Prisma schema
-// SQLite for local development. Kept conceptually compatible with PostgreSQL
-// (no enums / no native arrays — statuses and JSON are stored as strings).
+// PostgreSQL, managed with Prisma Migrate. The schema avoids enums / native
+// arrays (statuses and JSON are stored as strings) to keep it simple and
+// portable.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -16,17 +17,33 @@ datasource db {
 // ---------------------------------------------------------------------------
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  avatarUrl String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  avatarUrl    String?
+  passwordHash String? // scrypt hash; null = account has no password yet
+  passwordSalt String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  ownedWorkspaces Workspace[]        @relation("WorkspaceOwner")
+  ownedWorkspaces Workspace[]       @relation("WorkspaceOwner")
   memberships     WorkspaceMember[]
   messages        Message[]
   usageLogs       UsageLog[]
+  sessions        Session[]
+}
+
+// Server-side login sessions. The token lives in an httpOnly cookie.
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Workspace {
@@ -34,6 +51,7 @@ model Workspace {
   name        String
   description String?
   ownerId     String
+  tokenLimit  Int      @default(2000000) // shared token pool for the whole workspace
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -87,6 +105,9 @@ model Room {
   name           String
   description    String?
   defaultAgentId String?
+  createdById    String? // the user who created the room (only they can set a passcode)
+  passcodeHash   String? // scrypt hash; null = open room
+  passcodeSalt   String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -96,6 +117,7 @@ model Room {
   roomAgents   RoomAgent[]
   memoryItems  MemoryItem[]
   decisions    Decision[]
+  attachments  Attachment[]
 
   @@index([workspaceId])
 }
@@ -110,12 +132,32 @@ model Message {
   metadata   String?  // JSON string: mentionedAgentIds, mentionedUserIds, provider, model, error, triggeredByAgentId, triggeredByMessageId
   createdAt  DateTime @default(now())
 
-  room   Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  user   User?  @relation(fields: [userId], references: [id])
-  agent  Agent? @relation(fields: [agentId], references: [id])
+  room        Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user        User?        @relation(fields: [userId], references: [id])
+  agent       Agent?       @relation(fields: [agentId], references: [id])
+  attachments Attachment[]
 
   @@index([roomId])
   @@index([createdAt])
+}
+
+// Uploaded files (DOC / DOCX / XLSX / PDF / text). The parsed text is stored so
+// every AI agent can read the file content via the context builder.
+model Attachment {
+  id            String   @id @default(cuid())
+  roomId        String
+  messageId     String?
+  name          String
+  mimeType      String
+  size          Int
+  extractedText String
+  createdAt     DateTime @default(now())
+
+  room    Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  message Message? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+
+  @@index([roomId])
+  @@index([messageId])
 }
 
 model Agent {

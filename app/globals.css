@@ -6,6 +6,30 @@
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+
+  /* Light theme (RGB channels so Tailwind opacity modifiers keep working) */
+  --hive-bg: 255 255 255;
+  --hive-surface: 246 248 250;
+  --hive-panel: 234 238 242;
+  --hive-border: 208 215 222;
+  --hive-muted: 87 96 106;
+  --hive-text: 31 35 40;
+  --hive-accent: 245 166 35;
+  --hive-accent-soft: 253 230 194;
+  color-scheme: light;
+}
+
+.dark {
+  /* Dark theme */
+  --hive-bg: 13 17 23;
+  --hive-surface: 22 27 34;
+  --hive-panel: 28 33 40;
+  --hive-border: 48 54 61;
+  --hive-muted: 139 148 158;
+  --hive-text: 230 237 243;
+  --hive-accent: 245 166 35;
+  --hive-accent-soft: 59 47 20;
+  color-scheme: dark;
 }
 
 html,
@@ -18,10 +42,10 @@ body {
   font-family: var(--font-sans);
 }
 
-/* Thin dark scrollbars to match the workspace feel */
+/* Thin theme-aware scrollbars */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #30363d transparent;
+  scrollbar-color: rgb(var(--hive-border)) transparent;
 }
 
 *::-webkit-scrollbar {
@@ -30,7 +54,7 @@ body {
 }
 
 *::-webkit-scrollbar-thumb {
-  background-color: #30363d;
+  background-color: rgb(var(--hive-border));
   border-radius: 9999px;
 }
 

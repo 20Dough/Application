@@ -4,8 +4,9 @@ import {
   ok,
   badRequest,
   forbidden,
-  serverError,
   requireMembership,
+  unauthorized,
+  handleError,
 } from "@/lib/api";
 import { serializeDecision } from "@/lib/serialize";
 
@@ -13,6 +14,7 @@ import { serializeDecision } from "@/lib/serialize";
 export async function GET(req: Request) {
   try {
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const workspaceId = new URL(req.url).searchParams.get("workspaceId");
     if (!workspaceId) return badRequest("workspaceId is required");
 
@@ -25,7 +27,6 @@ export async function GET(req: Request) {
     });
     return ok(decisions.map(serializeDecision));
   } catch (err) {
-    console.error("[GET /api/decisions]", err);
-    return serverError();
+    return handleError("GET /api/decisions", err);
   }
 }

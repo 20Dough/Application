@@ -8,6 +8,11 @@ import { db } from "@/lib/db";
 
 const RECENT_MESSAGE_LIMIT = 30;
 
+interface AttachmentContext {
+  name: string;
+  text: string;
+}
+
 interface BuildContextArgs {
   workspaceId: string;
   roomId: string;
@@ -18,6 +23,10 @@ interface BuildContextArgs {
    * human message, which is already shown separately as the current message.
    */
   excludeMessageId?: string;
+  /** Pre-formatted web search results to give the agent fresh information. */
+  webSearchBlock?: string;
+  /** Parsed text of files attached to the current message. */
+  attachments?: AttachmentContext[];
 }
 
 export async function buildContext({
@@ -26,6 +35,8 @@ export async function buildContext({
   agentSystemPrompt,
   currentMessage,
   excludeMessageId,
+  webSearchBlock,
+  attachments,
 }: BuildContextArgs): Promise<string> {
   const [workspace, room, projectContexts, memoryItems, decisions, recent] =
     await Promise.all([
@@ -120,7 +131,22 @@ export async function buildContext({
     lines.push("");
   }
 
-  // 8. Current message
+  // 8. Attached files (parsed text of files on the current message)
+  if (attachments && attachments.length > 0) {
+    lines.push("Attached Files:");
+    for (const a of attachments) {
+      lines.push(`--- ${a.name} ---`);
+      lines.push(a.text);
+      lines.push("");
+    }
+  }
+
+  // 9. Live web search results (when the message warranted a search)
+  if (webSearchBlock) {
+    lines.push(webSearchBlock, "");
+  }
+
+  // 10. Current message
   lines.push("Current Message:");
   lines.push(currentMessage);
 

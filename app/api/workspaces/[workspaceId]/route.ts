@@ -4,8 +4,9 @@ import {
   ok,
   forbidden,
   notFound,
-  serverError,
   requireMembership,
+  unauthorized,
+  handleError,
 } from "@/lib/api";
 import { canManageWorkspace, roleAtLeast } from "@/lib/permissions";
 import { serializeWorkspace } from "@/lib/serialize";
@@ -17,6 +18,7 @@ export async function GET(_req: Request, { params }: Params) {
   try {
     const { workspaceId } = await params;
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const role = await requireMembership(user.id, workspaceId);
     if (!role) return forbidden("Not a member of this workspace");
 
@@ -26,8 +28,7 @@ export async function GET(_req: Request, { params }: Params) {
     if (!workspace) return notFound("Workspace not found");
     return ok(serializeWorkspace(workspace));
   } catch (err) {
-    console.error("[GET /api/workspaces/:id]", err);
-    return serverError();
+    return handleError("GET /api/workspaces/:id", err);
   }
 }
 
@@ -36,6 +37,7 @@ export async function PATCH(req: Request, { params }: Params) {
   try {
     const { workspaceId } = await params;
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const role = await requireMembership(user.id, workspaceId);
     if (!canManageWorkspace(role))
       return forbidden("Only admins/owners can update the workspace");
@@ -52,8 +54,7 @@ export async function PATCH(req: Request, { params }: Params) {
     });
     return ok(serializeWorkspace(workspace));
   } catch (err) {
-    console.error("[PATCH /api/workspaces/:id]", err);
-    return serverError();
+    return handleError("PATCH /api/workspaces/:id", err);
   }
 }
 
@@ -62,6 +63,7 @@ export async function DELETE(_req: Request, { params }: Params) {
   try {
     const { workspaceId } = await params;
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const role = await requireMembership(user.id, workspaceId);
     if (!roleAtLeast(role, "owner"))
       return forbidden("Only the owner can delete the workspace");
@@ -69,7 +71,6 @@ export async function DELETE(_req: Request, { params }: Params) {
     await db.workspace.delete({ where: { id: workspaceId } });
     return ok({ deleted: true });
   } catch (err) {
-    console.error("[DELETE /api/workspaces/:id]", err);
-    return serverError();
+    return handleError("DELETE /api/workspaces/:id", err);
   }
 }

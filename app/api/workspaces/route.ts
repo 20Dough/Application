@@ -1,12 +1,13 @@
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { ok, badRequest, serverError } from "@/lib/api";
+import { ok, badRequest, unauthorized, handleError } from "@/lib/api";
 import { serializeWorkspace } from "@/lib/serialize";
 
 // GET /api/workspaces — workspaces the current user belongs to
 export async function GET() {
   try {
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const memberships = await db.workspaceMember.findMany({
       where: { userId: user.id },
       include: { workspace: true },
@@ -14,8 +15,7 @@ export async function GET() {
     });
     return ok(memberships.map((m) => serializeWorkspace(m.workspace)));
   } catch (err) {
-    console.error("[GET /api/workspaces]", err);
-    return serverError();
+    return handleError("GET /api/workspaces", err);
   }
 }
 
@@ -23,6 +23,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const { name, description } = await req.json();
     if (!name?.trim()) return badRequest("name is required");
 
@@ -36,7 +37,6 @@ export async function POST(req: Request) {
     });
     return ok(serializeWorkspace(workspace), { status: 201 });
   } catch (err) {
-    console.error("[POST /api/workspaces]", err);
-    return serverError();
+    return handleError("POST /api/workspaces", err);
   }
 }

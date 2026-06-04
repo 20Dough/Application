@@ -5,17 +5,22 @@ import {
   badRequest,
   forbidden,
   notFound,
-  serverError,
   requireMembership,
+  unauthorized,
+  tooManyRequests,
+  handleError,
 } from "@/lib/api";
 import { canSendMessages } from "@/lib/permissions";
 import { serializeMessage } from "@/lib/serialize";
 import { routeMessage } from "@/lib/ai/ai-router";
+import { canAccessRoom } from "@/lib/rooms/passcode";
+import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 // GET /api/messages?roomId=
 export async function GET(req: Request) {
   try {
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const roomId = new URL(req.url).searchParams.get("roomId");
     if (!roomId) return badRequest("roomId is required");
 
@@ -24,6 +29,7 @@ export async function GET(req: Request) {
 
     const role = await requireMembership(user.id, room.workspaceId);
     if (!role) return forbidden("Not a member of this workspace");
+    if (!canAccessRoom(room, req)) return forbidden("Room is locked");
 
     const messages = await db.message.findMany({
       where: { roomId },
@@ -32,8 +38,7 @@ export async function GET(req: Request) {
     });
     return ok(messages.map(serializeMessage));
   } catch (err) {
-    console.error("[GET /api/messages]", err);
-    return serverError();
+    return handleError("GET /api/messages", err);
   }
 }
 
@@ -42,7 +47,17 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const user = await getCurrentUser();
-    const { roomId, content } = await req.json();
+    if (!user) return unauthorized();
+
+    // Cap how often a user can trigger the AI Router (cost + abuse guard).
+    const limit = rateLimit(`messages:${user.id}`, RATE_LIMITS.messages);
+    if (!limit.ok)
+      return tooManyRequests(
+        limit.retryAfter,
+        "You're sending messages too fast",
+      );
+
+    const { roomId, content, attachmentIds } = await req.json();
     if (!roomId || !content?.trim())
       return badRequest("roomId and content are required");
 
@@ -53,15 +68,16 @@ export async function POST(req: Request) {
     if (!role) return forbidden("Not a member of this workspace");
     if (!canSendMessages(role))
       return forbidden("Viewers cannot send messages");
+    if (!canAccessRoom(room, req)) return forbidden("Room is locked");
 
     const result = await routeMessage({
       roomId,
       userId: user.id,
       content: content.trim(),
+      attachmentIds: Array.isArray(attachmentIds) ? attachmentIds : [],
     });
     return ok(result, { status: 201 });
   } catch (err) {
-    console.error("[POST /api/messages]", err);
-    return serverError();
+    return handleError("POST /api/messages", err);
   }
 }

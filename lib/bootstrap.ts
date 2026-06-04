@@ -1,6 +1,7 @@
-// Ensures the canonical default workspace exists (Van + ARi + Cloudy + a
-// starter room) so the app is usable immediately on a fresh database. This is
-// the same data as prisma/seed.ts but runs on demand from the bootstrap route.
+// Ensures a default workspace exists for a user (their own workspace + the
+// default agents ARi + Cloudy + a starter room) so the app is usable
+// immediately on first sign-in. Mirrors prisma/seed.ts but runs on demand from
+// the bootstrap route.
 
 import { db } from "@/lib/db";
 
@@ -23,6 +24,8 @@ export async function ensureDefaultWorkspace(userId: string) {
     },
   });
 
+  // Roles are swapped vs. the original team: ARi now reviews/reasons and Cloudy
+  // now architects/builds. Display names + providers are unchanged.
   const ari = await db.agent.create({
     data: {
       workspaceId: workspace.id,
@@ -30,9 +33,9 @@ export async function ensureDefaultWorkspace(userId: string) {
       displayName: "ARi",
       provider: "openai",
       model: "gpt-4o",
-      role: "System Architect / Programmer",
+      role: "Deep Reasoning / Review Partner",
       systemPrompt:
-        "You are ARi, an AI system architect and programmer inside HiveMind. You represent the OpenAI / ChatGPT side of the team. You help users design systems, write code, debug, plan architecture, and turn ideas into working products. Be direct, practical, structured, and implementation-focused. You work well with Cloudy.",
+        "You are ARi, a deep reasoning AI collaborator inside HiveMind. You represent the OpenAI / ChatGPT side of the team. You review ideas, detect weaknesses, improve logic, refine plans, and explain complex systems clearly. You are careful, structured, and thoughtful. You work well with Cloudy.",
     },
   });
 
@@ -43,9 +46,9 @@ export async function ensureDefaultWorkspace(userId: string) {
       displayName: "Cloudy",
       provider: "anthropic",
       model: "claude-sonnet-4-6",
-      role: "Deep Reasoning / Review Partner",
+      role: "System Architect / Programmer",
       systemPrompt:
-        "You are Cloudy, a deep reasoning AI collaborator inside HiveMind. You represent the Claude AI / Anthropic side of the team. You review ideas, detect weaknesses, improve logic, refine plans, and explain complex systems clearly. You are careful, structured, and thoughtful. You work well with ARi.",
+        "You are Cloudy, an AI system architect and programmer inside HiveMind. You represent the Claude AI / Anthropic side of the team. You help users design systems, write code, debug, plan architecture, and turn ideas into working products. Be direct, practical, structured, and implementation-focused. You work well with ARi.",
     },
   });
 
@@ -55,6 +58,7 @@ export async function ensureDefaultWorkspace(userId: string) {
       name: "App Development",
       description: "Designing and building the HiveMind MVP.",
       defaultAgentId: ari.id,
+      createdById: userId,
       roomAgents: {
         create: [{ agentId: ari.id }, { agentId: cloudy.id }],
       },

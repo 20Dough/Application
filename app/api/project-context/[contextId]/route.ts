@@ -4,8 +4,9 @@ import {
   ok,
   forbidden,
   notFound,
-  serverError,
   requireMembership,
+  unauthorized,
+  handleError,
 } from "@/lib/api";
 import { canManageWorkspace } from "@/lib/permissions";
 import { serializeProjectContext } from "@/lib/serialize";
@@ -17,6 +18,7 @@ export async function PATCH(req: Request, { params }: Params) {
   try {
     const { contextId } = await params;
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const item = await db.projectContext.findUnique({
       where: { id: contextId },
     });
@@ -36,8 +38,7 @@ export async function PATCH(req: Request, { params }: Params) {
     });
     return ok(serializeProjectContext(updated));
   } catch (err) {
-    console.error("[PATCH /api/project-context/:id]", err);
-    return serverError();
+    return handleError("PATCH /api/project-context/:id", err);
   }
 }
 
@@ -46,6 +47,7 @@ export async function DELETE(_req: Request, { params }: Params) {
   try {
     const { contextId } = await params;
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const item = await db.projectContext.findUnique({
       where: { id: contextId },
     });
@@ -58,7 +60,6 @@ export async function DELETE(_req: Request, { params }: Params) {
     await db.projectContext.delete({ where: { id: contextId } });
     return ok({ deleted: true });
   } catch (err) {
-    console.error("[DELETE /api/project-context/:id]", err);
-    return serverError();
+    return handleError("DELETE /api/project-context/:id", err);
   }
 }

@@ -4,8 +4,9 @@ import {
   ok,
   forbidden,
   notFound,
-  serverError,
   requireMembership,
+  unauthorized,
+  handleError,
 } from "@/lib/api";
 import { canManageWorkspace } from "@/lib/permissions";
 import { serializeAgent } from "@/lib/serialize";
@@ -17,6 +18,7 @@ export async function PATCH(req: Request, { params }: Params) {
   try {
     const { agentId } = await params;
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const agent = await db.agent.findUnique({ where: { id: agentId } });
     if (!agent) return notFound("Agent not found");
 
@@ -46,8 +48,7 @@ export async function PATCH(req: Request, { params }: Params) {
     });
     return ok(serializeAgent(updated));
   } catch (err) {
-    console.error("[PATCH /api/agents/:id]", err);
-    return serverError();
+    return handleError("PATCH /api/agents/:id", err);
   }
 }
 
@@ -56,6 +57,7 @@ export async function DELETE(_req: Request, { params }: Params) {
   try {
     const { agentId } = await params;
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const agent = await db.agent.findUnique({ where: { id: agentId } });
     if (!agent) return notFound("Agent not found");
 
@@ -66,7 +68,6 @@ export async function DELETE(_req: Request, { params }: Params) {
     await db.agent.delete({ where: { id: agentId } });
     return ok({ deleted: true });
   } catch (err) {
-    console.error("[DELETE /api/agents/:id]", err);
-    return serverError();
+    return handleError("DELETE /api/agents/:id", err);
   }
 }
