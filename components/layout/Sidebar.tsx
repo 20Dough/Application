@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { Room, User, Workspace, WorkspaceMember } from "@/types";
 import { cn, initials } from "@/lib/utils";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 interface SidebarProps {
   workspace: Workspace;
@@ -13,6 +14,8 @@ interface SidebarProps {
   onSelectRoom: (roomId: string) => void;
   onCreateRoom: () => void;
   onLogout: () => void;
+  /** Close the mobile drawer (only rendered on small screens). */
+  onClose?: () => void;
 }
 
 const roleBadge: Record<string, string> = {
@@ -31,6 +34,7 @@ export function Sidebar({
   onSelectRoom,
   onCreateRoom,
   onLogout,
+  onClose,
 }: SidebarProps) {
   const [query, setQuery] = useState("");
 
@@ -54,12 +58,22 @@ export function Sidebar({
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-hive-accent text-sm font-bold text-black">
           🐝
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h1 className="truncate text-sm font-semibold text-hive-text">
             {workspace.name}
           </h1>
           <p className="truncate text-xs text-hive-muted">Workspace</p>
         </div>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            title="Close menu"
+            className="flex h-7 w-7 items-center justify-center rounded text-hive-muted transition hover:bg-hive-panel hover:text-hive-text lg:hidden"
+          >
+            ✕
+          </button>
+        )}
       </div>
 
       {/* Search rooms / people */}
@@ -148,30 +162,37 @@ export function Sidebar({
         </ul>
       </div>
 
-      {/* Signed-in user + logout */}
-      {currentUser && (
-        <div className="flex items-center gap-2 border-t border-hive-border px-3 py-3">
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-hive-accent text-[10px] font-semibold text-black">
-            {initials(currentUser.name)}
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-medium text-hive-text">
-              {currentUser.name}
-            </p>
-            <p className="truncate text-[10px] text-hive-muted">
-              {currentUser.email}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onLogout}
-            title="Sign out"
-            className="rounded px-1.5 py-1 text-[11px] text-hive-muted transition hover:text-hive-accent"
-          >
-            Sign out
-          </button>
+      {/* Theme + signed-in user */}
+      <div className="space-y-2 border-t border-hive-border px-3 py-3">
+        <div className="flex items-center justify-between">
+          <ThemeToggle />
+          {currentUser && (
+            <button
+              type="button"
+              onClick={onLogout}
+              title="Sign out"
+              className="rounded px-1.5 py-1 text-[11px] text-hive-muted transition hover:text-hive-accent"
+            >
+              Sign out
+            </button>
+          )}
         </div>
-      )}
+        {currentUser && (
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-hive-accent text-[10px] font-semibold text-black">
+              {initials(currentUser.name)}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-medium text-hive-text">
+                {currentUser.name}
+              </p>
+              <p className="truncate text-[10px] text-hive-muted">
+                {currentUser.email}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
     </aside>
   );
 }

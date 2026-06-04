@@ -15,6 +15,7 @@ import type {
   WorkspaceMember,
 } from "@/types";
 import type { SummaryRange } from "@/lib/summary/decision-summary";
+import { cn } from "@/lib/utils";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { PasscodeGate } from "@/components/chat/PasscodeGate";
@@ -64,6 +65,10 @@ export function WorkspaceView() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [sending, setSending] = useState(false);
+
+  // Mobile/tablet drawer state for the side panels.
+  const [navOpen, setNavOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
 
   // Passcode that has unlocked a given room this session (roomId → passcode).
   const [unlocked, setUnlocked] = useState<Record<string, string>>({});
@@ -336,48 +341,112 @@ export function WorkspaceView() {
   }
 
   return (
-    <div className="flex h-screen w-full overflow-hidden">
-      <Sidebar
-        workspace={workspace}
-        rooms={rooms}
-        members={members}
-        currentUser={currentUser}
-        activeRoomId={activeRoom.id}
-        onSelectRoom={selectRoom}
-        onCreateRoom={handleCreateRoom}
-        onLogout={handleLogout}
-      />
-      {roomLocked ? (
-        <PasscodeGate
-          room={activeRoom}
-          error={passcodeError}
-          onUnlock={handleUnlock}
-        />
-      ) : (
-        <ChatPanel
-          room={activeRoom}
-          messages={messages}
-          agents={agents}
-          attachments={attachments}
-          currentUserId={currentUser?.id}
-          sending={sending}
-          onSend={handleSend}
-          onUploadFile={handleUploadFile}
-          onGenerateSummary={handleGenerateSummary}
-          onSetPasscode={handleSetPasscode}
+    <div className="relative flex h-screen w-full overflow-hidden">
+      {/* Backdrops for the mobile/tablet drawers */}
+      {navOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+          onClick={() => setNavOpen(false)}
         />
       )}
-      <RightPanel
-        agents={agents}
-        projectContext={projectContext}
-        memory={memory}
-        decisions={decisions}
-        tokens={tokens}
-        canManage={canManage}
-        onAddMemory={handleAddMemory}
-        onAddContext={handleAddContext}
-        onUpdateAgent={handleUpdateAgent}
-      />
+      {infoOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 xl:hidden"
+          onClick={() => setInfoOpen(false)}
+        />
+      )}
+
+      {/* Sidebar — drawer below lg, static column at lg+ */}
+      <div
+        className={cn(
+          "fixed inset-y-0 left-0 z-40 w-64 transform shadow-xl transition-transform duration-200 lg:static lg:z-auto lg:translate-x-0 lg:shadow-none",
+          navOpen ? "translate-x-0" : "-translate-x-full",
+        )}
+      >
+        <Sidebar
+          workspace={workspace}
+          rooms={rooms}
+          members={members}
+          currentUser={currentUser}
+          activeRoomId={activeRoom.id}
+          onSelectRoom={(id) => {
+            selectRoom(id);
+            setNavOpen(false);
+          }}
+          onCreateRoom={handleCreateRoom}
+          onLogout={handleLogout}
+          onClose={() => setNavOpen(false)}
+        />
+      </div>
+
+      {/* Center column */}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        {/* Mobile/tablet top bar */}
+        <div className="flex items-center gap-2 border-b border-hive-border bg-hive-surface px-3 py-2 xl:hidden">
+          <button
+            type="button"
+            onClick={() => setNavOpen(true)}
+            title="Open menu"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-hive-muted transition hover:bg-hive-panel hover:text-hive-text lg:hidden"
+          >
+            ☰
+          </button>
+          <span className="flex flex-1 items-center gap-1.5 truncate text-sm font-semibold text-hive-text">
+            <span aria-hidden>🐝</span>
+            <span className="truncate">{activeRoom.name}</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => setInfoOpen(true)}
+            title="Open details"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-base text-hive-muted transition hover:bg-hive-panel hover:text-hive-text"
+          >
+            ⓘ
+          </button>
+        </div>
+
+        {roomLocked ? (
+          <PasscodeGate
+            room={activeRoom}
+            error={passcodeError}
+            onUnlock={handleUnlock}
+          />
+        ) : (
+          <ChatPanel
+            room={activeRoom}
+            messages={messages}
+            agents={agents}
+            attachments={attachments}
+            currentUserId={currentUser?.id}
+            sending={sending}
+            onSend={handleSend}
+            onUploadFile={handleUploadFile}
+            onGenerateSummary={handleGenerateSummary}
+            onSetPasscode={handleSetPasscode}
+          />
+        )}
+      </div>
+
+      {/* Right panel — drawer below xl, static column at xl+ */}
+      <div
+        className={cn(
+          "fixed inset-y-0 right-0 z-40 w-80 max-w-[85vw] transform shadow-xl transition-transform duration-200 xl:static xl:z-auto xl:max-w-none xl:translate-x-0 xl:shadow-none",
+          infoOpen ? "translate-x-0" : "translate-x-full",
+        )}
+      >
+        <RightPanel
+          agents={agents}
+          projectContext={projectContext}
+          memory={memory}
+          decisions={decisions}
+          tokens={tokens}
+          canManage={canManage}
+          onAddMemory={handleAddMemory}
+          onAddContext={handleAddContext}
+          onUpdateAgent={handleUpdateAgent}
+          onClose={() => setInfoOpen(false)}
+        />
+      </div>
     </div>
   );
 }

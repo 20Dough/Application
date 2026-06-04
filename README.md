@@ -7,15 +7,15 @@ This repository implements the working MVP — the full core collaboration loop 
 ## Tech stack
 
 - **Next.js** (App Router) + **React** + **TypeScript**
-- **Tailwind CSS** (dark theme)
+- **Tailwind CSS** — responsive (desktop / tablet / mobile) with a light / dark / system theme toggle
 - **Prisma ORM** with **PostgreSQL**, managed via Prisma Migrate (local Postgres via Docker Compose)
 
 ## What's included
 
-- Three-pane workspace UI (dark theme):
-  - **Left sidebar** — workspace name, room list, create-room button, team members
+- **Responsive three-pane workspace UI** with light / dark / system theming:
+  - **Left sidebar** — workspace name, room list, create-room button, team members, theme toggle (collapses to a drawer on tablet/mobile)
   - **Center** — chat messages, message input, inline `@mention` highlighting, "Summarize" action
-  - **Right panel** — AI agents, project context, shared memory, decisions
+  - **Right panel** — AI agents, project context, shared memory, decisions (collapses to a drawer below desktop)
 - **Database-driven agents** (default team: **ARi** → OpenAI, **Cloudy** → Anthropic)
   - **Editable agents** — rename any agent (including ARi/Cloudy), switch provider, and pick from a **model catalog** (e.g. Claude Opus 4.8 / Sonnet 4.6 / Haiku 4.5, GPT-4o / 4.1 / 4o-mini / o3, Gemini 2.5 Pro / 2.0 Flash)
 - **AI Router** (`lib/ai/ai-router.ts`) — the only place AI orchestration happens

@@ -28,6 +28,8 @@ interface RightPanelProps {
       Pick<Agent, "displayName" | "provider" | "model" | "role" | "isActive">
     >,
   ) => Promise<void>;
+  /** Close the mobile/tablet drawer (only rendered on small screens). */
+  onClose?: () => void;
 }
 
 type Tab = "agents" | "context" | "memory" | "decisions" | "tokens";
@@ -50,11 +52,28 @@ export function RightPanel({
   onAddMemory,
   onAddContext,
   onUpdateAgent,
+  onClose,
 }: RightPanelProps) {
   const [tab, setTab] = useState<Tab>("agents");
 
   return (
-    <aside className="flex h-full w-80 flex-col border-l border-hive-border bg-hive-panel">
+    <aside className="flex h-full w-full flex-col border-l border-hive-border bg-hive-panel xl:w-80">
+      {/* Mobile/tablet close bar */}
+      {onClose && (
+        <div className="flex items-center justify-between border-b border-hive-border px-3 py-2 xl:hidden">
+          <span className="text-xs font-semibold uppercase tracking-wide text-hive-muted">
+            Details
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            title="Close"
+            className="flex h-7 w-7 items-center justify-center rounded text-hive-muted transition hover:bg-hive-surface hover:text-hive-text"
+          >
+            ✕
+          </button>
+        </div>
+      )}
       {/* Tabs */}
       <div className="flex border-b border-hive-border">
         {tabs.map((t) => (
