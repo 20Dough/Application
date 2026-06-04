@@ -6,6 +6,7 @@ import {
   notFound,
   serverError,
   requireMembership,
+  unauthorized,
 } from "@/lib/api";
 import { canManageWorkspace } from "@/lib/permissions";
 import { serializeAgent } from "@/lib/serialize";
@@ -17,6 +18,7 @@ export async function PATCH(req: Request, { params }: Params) {
   try {
     const { agentId } = await params;
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const agent = await db.agent.findUnique({ where: { id: agentId } });
     if (!agent) return notFound("Agent not found");
 
@@ -56,6 +58,7 @@ export async function DELETE(_req: Request, { params }: Params) {
   try {
     const { agentId } = await params;
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const agent = await db.agent.findUnique({ where: { id: agentId } });
     if (!agent) return notFound("Agent not found");
 

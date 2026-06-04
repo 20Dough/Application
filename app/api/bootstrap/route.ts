@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { ok, serverError } from "@/lib/api";
+import { ok, serverError, unauthorized } from "@/lib/api";
 import { ensureDefaultWorkspace } from "@/lib/bootstrap";
 import {
   serializeAgent,
@@ -19,6 +19,7 @@ import {
 export async function GET() {
   try {
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const workspace = await ensureDefaultWorkspace(user.id);
     const workspaceId = workspace.id;
 

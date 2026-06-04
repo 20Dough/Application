@@ -7,6 +7,7 @@ import {
   notFound,
   serverError,
   requireMembership,
+  unauthorized,
 } from "@/lib/api";
 import { canSendMessages } from "@/lib/permissions";
 import { canAccessRoom } from "@/lib/rooms/passcode";
@@ -20,6 +21,7 @@ import {
 export async function POST(req: Request) {
   try {
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const { roomId, title, range } = await req.json();
     if (!roomId) return badRequest("roomId is required");
 

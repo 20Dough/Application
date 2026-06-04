@@ -43,10 +43,20 @@ type RawUser = {
   avatarUrl: string | null;
   createdAt: Date;
   updatedAt: Date;
+  // May be present on the Prisma row — explicitly NOT forwarded to the client.
+  passwordHash?: string | null;
+  passwordSalt?: string | null;
 };
 
 export function serializeUser(u: RawUser): User {
-  return { ...u, createdAt: iso(u.createdAt), updatedAt: iso(u.updatedAt) };
+  return {
+    id: u.id,
+    email: u.email,
+    name: u.name,
+    avatarUrl: u.avatarUrl ?? null,
+    createdAt: iso(u.createdAt),
+    updatedAt: iso(u.updatedAt),
+  };
 }
 
 type RawWorkspace = {

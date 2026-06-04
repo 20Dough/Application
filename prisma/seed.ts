@@ -3,15 +3,28 @@
 // Cloudy (Anthropic). Run with: npm run db:seed
 
 import { PrismaClient } from "@prisma/client";
+import { randomBytes, scryptSync } from "crypto";
 
 const db = new PrismaClient();
 
+// Mirror lib/crypto.ts (the seed can't import "@/..." path aliases).
+function hashSecret(secret: string) {
+  const salt = randomBytes(16).toString("hex");
+  const hash = scryptSync(secret, salt, 64).toString("hex");
+  return { hash, salt };
+}
+
 async function main() {
-  // Founder
+  // Founder — seeded with a dev password so you can log in immediately.
+  const email = process.env.DEV_USER_EMAIL ?? "van@hivemind.dev";
+  const name = process.env.DEV_USER_NAME ?? "Van";
+  const password = process.env.DEV_USER_PASSWORD ?? "password";
+  const { hash, salt } = hashSecret(password);
+
   const van = await db.user.upsert({
-    where: { email: "van@hivemind.dev" },
-    update: {},
-    create: { email: "van@hivemind.dev", name: "Van" },
+    where: { email },
+    update: { passwordHash: hash, passwordSalt: salt },
+    create: { email, name, passwordHash: hash, passwordSalt: salt },
   });
 
   // Workspace

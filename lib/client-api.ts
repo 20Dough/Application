@@ -29,14 +29,43 @@ export interface BootstrapData {
   messages: Message[];
 }
 
+/** Error thrown by API helpers; carries the HTTP status (e.g. 401). */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 async function unwrap<T>(res: Response): Promise<T> {
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.error ?? "Request failed");
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiError(json.error ?? "Request failed", res.status);
   return json.data as T;
 }
 
 export async function fetchBootstrap(): Promise<BootstrapData> {
   return unwrap<BootstrapData>(await fetch("/api/bootstrap"));
+}
+
+// --- Auth ---
+
+export async function register(
+  email: string,
+  name: string,
+  password: string,
+): Promise<User> {
+  return postJson<User>("/api/auth/register", { email, name, password });
+}
+
+export async function login(email: string, password: string): Promise<User> {
+  return postJson<User>("/api/auth/login", { email, password });
+}
+
+export async function logout(): Promise<void> {
+  await fetch("/api/auth/logout", { method: "POST" });
 }
 
 /** Header carrying a room passcode for locked rooms (omitted when none). */

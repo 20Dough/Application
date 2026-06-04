@@ -6,6 +6,7 @@ import {
   notFound,
   serverError,
   requireMembership,
+  unauthorized,
 } from "@/lib/api";
 import { canManageWorkspace, getMemberRole } from "@/lib/permissions";
 import { serializeRoom } from "@/lib/serialize";
@@ -18,6 +19,7 @@ export async function GET(_req: Request, { params }: Params) {
   try {
     const { roomId } = await params;
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const room = await db.room.findUnique({ where: { id: roomId } });
     if (!room) return notFound("Room not found");
 
@@ -35,6 +37,7 @@ export async function PATCH(req: Request, { params }: Params) {
   try {
     const { roomId } = await params;
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const room = await db.room.findUnique({ where: { id: roomId } });
     if (!room) return notFound("Room not found");
 
@@ -89,6 +92,7 @@ export async function DELETE(_req: Request, { params }: Params) {
   try {
     const { roomId } = await params;
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const room = await db.room.findUnique({ where: { id: roomId } });
     if (!room) return notFound("Room not found");
 

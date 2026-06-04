@@ -6,6 +6,7 @@ import {
   notFound,
   serverError,
   requireMembership,
+  unauthorized,
 } from "@/lib/api";
 import { canManageWorkspace, roleAtLeast } from "@/lib/permissions";
 import { serializeWorkspace } from "@/lib/serialize";
@@ -17,6 +18,7 @@ export async function GET(_req: Request, { params }: Params) {
   try {
     const { workspaceId } = await params;
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const role = await requireMembership(user.id, workspaceId);
     if (!role) return forbidden("Not a member of this workspace");
 
@@ -36,6 +38,7 @@ export async function PATCH(req: Request, { params }: Params) {
   try {
     const { workspaceId } = await params;
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const role = await requireMembership(user.id, workspaceId);
     if (!canManageWorkspace(role))
       return forbidden("Only admins/owners can update the workspace");
@@ -62,6 +65,7 @@ export async function DELETE(_req: Request, { params }: Params) {
   try {
     const { workspaceId } = await params;
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const role = await requireMembership(user.id, workspaceId);
     if (!roleAtLeast(role, "owner"))
       return forbidden("Only the owner can delete the workspace");

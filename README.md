@@ -27,6 +27,7 @@ This repository implements the working MVP — the full core collaboration loop 
 - **Mention system** — `@ARi`, `@Cloudy`, multi-agent, default-agent fallback
 - **Context builder** with the spec's priority order (ProjectContext before Memory) + attachments + web results
 - **Decision summaries** with selectable ranges — last 30 messages / past 2 hours / past day / whole project
+- **Real auth** — email + password with server-side sessions (scrypt-hashed, httpOnly cookie); every API route is gated and each user gets their own workspace
 - Role-based permissions (owner / admin / member / viewer)
 - **Per-room passcodes** — only the room creator can set/clear a passcode; locked rooms are gated client- and server-side
 - **Human collaboration** — workspace members, invitations (invite by email), room-agent membership
@@ -39,6 +40,7 @@ This repository implements the working MVP — the full core collaboration loop 
 
 | Resource | Routes |
 | --- | --- |
+| Auth | `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout` |
 | Workspaces | `GET/POST /api/workspaces`, `GET/PATCH/DELETE /api/workspaces/[id]` |
 | Rooms | `GET/POST /api/rooms`, `GET/PATCH/DELETE /api/rooms/[id]` |
 | Messages | `GET/POST /api/messages` (POST runs the AI Router) |
@@ -67,11 +69,14 @@ app/
 components/
   layout/              Sidebar
   chat/                ChatPanel, MessageItem, MessageInput
-  workspace/           WorkspaceView, RightPanel
-  agents/              AgentList
+  workspace/           WorkspaceView, RightPanel, TokenPanel
+  agents/              AgentEditor
+  auth/                AuthScreen (sign in / sign up)
 lib/
   db.ts                Prisma client singleton
-  auth.ts              Placeholder current user (Clerk-ready)
+  auth.ts              getCurrentUser() from the session cookie
+  auth/session.ts      Session create / resolve / destroy
+  crypto.ts            Shared scrypt hashing (passwords + passcodes)
   permissions.ts       Role checks
   api.ts               API response + membership helpers
   serialize.ts         Prisma rows → domain types

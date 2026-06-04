@@ -19,15 +19,18 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { PasscodeGate } from "@/components/chat/PasscodeGate";
 import { RightPanel } from "@/components/workspace/RightPanel";
+import { AuthScreen } from "@/components/auth/AuthScreen";
 import {
   addMemory,
   addProjectContext,
+  ApiError,
   createRoom,
   fetchAttachments,
   fetchBootstrap,
   fetchMessages,
   fetchTokens,
   generateSummary,
+  logout,
   sendMessage,
   setRoomPasscode,
   updateAgent,
@@ -44,6 +47,8 @@ import {
 export function WorkspaceView() {
   const [data, setData] = useState<BootstrapData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // null = still checking; true/false once we know if a session exists.
+  const [authed, setAuthed] = useState<boolean | null>(null);
 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
@@ -82,32 +87,48 @@ export function WorkspaceView() {
     [],
   );
 
+  const load = useCallback(async () => {
+    try {
+      const d = await fetchBootstrap();
+      setAuthed(true);
+      setData(d);
+      setCurrentUser(d.currentUser);
+      setWorkspace(d.workspace);
+      setMembers(d.members);
+      setRooms(d.rooms);
+      setAgents(d.agents);
+      setProjectContext(d.projectContext);
+      setMemory(d.memory);
+      setDecisions(d.decisions);
+      setActiveRoomId(d.activeRoomId);
+      setMessages(d.messages);
+      refreshTokens(d.workspace.id);
+
+      const firstRoom = d.rooms.find((r) => r.id === d.activeRoomId);
+      if (firstRoom && !firstRoom.isLocked) {
+        fetchAttachments(firstRoom.id)
+          .then(setAttachments)
+          .catch(() => {});
+      }
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) {
+        setAuthed(false); // show the sign-in screen
+      } else {
+        setError((e as Error).message);
+      }
+    }
+  }, [refreshTokens]);
+
   // Initial load
   useEffect(() => {
-    fetchBootstrap()
-      .then((d) => {
-        setData(d);
-        setCurrentUser(d.currentUser);
-        setWorkspace(d.workspace);
-        setMembers(d.members);
-        setRooms(d.rooms);
-        setAgents(d.agents);
-        setProjectContext(d.projectContext);
-        setMemory(d.memory);
-        setDecisions(d.decisions);
-        setActiveRoomId(d.activeRoomId);
-        setMessages(d.messages);
-        refreshTokens(d.workspace.id);
+    load();
+  }, [load]);
 
-        const firstRoom = d.rooms.find((r) => r.id === d.activeRoomId);
-        if (firstRoom && !firstRoom.isLocked) {
-          fetchAttachments(firstRoom.id)
-            .then(setAttachments)
-            .catch(() => {});
-        }
-      })
-      .catch((e) => setError(e.message));
-  }, [refreshTokens]);
+  async function handleLogout() {
+    await logout();
+    setAuthed(false);
+    setData(null);
+  }
 
   const activeRoom = useMemo(
     () => rooms.find((r) => r.id === activeRoomId) ?? null,
@@ -274,6 +295,19 @@ export function WorkspaceView() {
     setAgents((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
   }
 
+  // Not signed in → show the auth screen.
+  if (authed === false) {
+    return (
+      <AuthScreen
+        onAuthed={() => {
+          setAuthed(null);
+          setError(null);
+          load();
+        }}
+      />
+    );
+  }
+
   if (error) {
     return (
       <div className="flex h-screen items-center justify-center bg-hive-bg p-6 text-center">
@@ -307,9 +341,11 @@ export function WorkspaceView() {
         workspace={workspace}
         rooms={rooms}
         members={members}
+        currentUser={currentUser}
         activeRoomId={activeRoom.id}
         onSelectRoom={selectRoom}
         onCreateRoom={handleCreateRoom}
+        onLogout={handleLogout}
       />
       {roomLocked ? (
         <PasscodeGate

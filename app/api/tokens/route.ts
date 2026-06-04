@@ -5,6 +5,7 @@ import {
   forbidden,
   serverError,
   requireMembership,
+  unauthorized,
 } from "@/lib/api";
 import { getWorkspaceBudget, getAppTokenStats } from "@/lib/tokens/budget";
 import type { TokenInfo } from "@/types";
@@ -13,6 +14,7 @@ import type { TokenInfo } from "@/types";
 export async function GET(req: Request) {
   try {
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const workspaceId = new URL(req.url).searchParams.get("workspaceId");
     if (!workspaceId) return badRequest("workspaceId is required");
 

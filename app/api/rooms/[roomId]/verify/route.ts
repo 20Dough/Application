@@ -7,6 +7,7 @@ import {
   notFound,
   serverError,
   requireMembership,
+  unauthorized,
 } from "@/lib/api";
 import { verifyPasscode } from "@/lib/rooms/passcode";
 
@@ -17,6 +18,7 @@ export async function POST(req: Request, { params }: Params) {
   try {
     const { roomId } = await params;
     const user = await getCurrentUser();
+    if (!user) return unauthorized();
     const room = await db.room.findUnique({ where: { id: roomId } });
     if (!room) return notFound("Room not found");
 
