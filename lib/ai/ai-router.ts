@@ -176,7 +176,8 @@ export async function routeMessage({
             attachments,
           });
           const inputTokens =
-            estimateTokens(systemContext) + estimateTokens(content);
+            estimateTokens(systemContext, p.agent.model) +
+            estimateTokens(content, p.agent.model);
           const text = await getProvider(p.agent.provider).generateResponse({
             model: p.agent.model,
             systemPrompt: systemContext,
@@ -214,7 +215,7 @@ export async function routeMessage({
 
     const result = results.get(p.agent.id);
     if (result?.ok) {
-      const outputTokens = estimateTokens(result.text);
+      const outputTokens = estimateTokens(result.text, p.agent.model);
       const meta: MessageMetadata = {
         provider: p.agent.provider as AgentType["provider"],
         model: p.agent.model,
@@ -342,8 +343,10 @@ async function resolveTargets({
       workspaceId,
       provider: selector.provider,
       model: selector.model,
-      inputTokens: estimateTokens(systemPrompt) + estimateTokens(content),
-      outputTokens: estimateTokens(raw),
+      inputTokens:
+        estimateTokens(systemPrompt, selector.model) +
+        estimateTokens(content, selector.model),
+      outputTokens: estimateTokens(raw, selector.model),
     });
 
     const picked = matchAgentFromText(raw, activeAgents);

@@ -23,7 +23,7 @@ This repository implements the working MVP — the full core collaboration loop 
 - **Provider abstraction** — OpenAI / Anthropic / Gemini adapters behind one interface (all three now call real APIs, with mock fallback when keys are absent)
 - **Web search for every agent** (`lib/ai/tools/web-search.ts`) — live results via Tavily (`SEARCH_API_KEY`), with mock fallback; injected into context when a message needs fresh info
 - **Document reading** — upload **PDF / Word (.docx) / Excel (.xlsx) / CSV / text**; parsed text is fed to the agents (`lib/files/parse.ts`)
-- **Token budget** — a shared **per-workspace token pool** with per-model sub-limits, per-call tokenization, app-wide totals/averages, and **auto-fallback** to another model when one runs out
+- **Token budget** — a shared **per-workspace token pool** with per-model sub-limits, real per-call tokenization (`js-tiktoken`, model-aware encoding), app-wide totals/averages, and **auto-fallback** to another model when one runs out
 - **Mention system** — `@ARi`, `@Cloudy`, multi-agent, default-agent fallback
 - **Context builder** with the spec's priority order (ProjectContext before Memory) + attachments + web results
 - **Decision summaries** with selectable ranges — last 30 messages / past 2 hours / past day / whole project

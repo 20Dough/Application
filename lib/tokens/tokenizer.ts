@@ -1,20 +1,46 @@
-// Lightweight tokenization estimate.
+// Real tokenization via js-tiktoken (pure JS, no WASM).
 //
-// We don't ship a full BPE tokenizer for the MVP — a ~4-characters-per-token
-// heuristic is accurate enough to drive the budget meter and per-call usage
-// logging, and it works identically for every provider with zero dependencies.
+// OpenAI models are exact; Anthropic/Gemini have no lightweight public
+// tokenizer, so we approximate them with OpenAI's modern o200k_base encoding —
+// far closer than the old chars/4 heuristic. Encoders are cached per encoding.
 
-const CHARS_PER_TOKEN = 4;
+import { getEncoding, type Tiktoken } from "js-tiktoken";
 
-/** Estimate the number of tokens in a piece of text. */
-export function estimateTokens(text: string | null | undefined): number {
-  if (!text) return 0;
-  return Math.ceil(text.length / CHARS_PER_TOKEN);
+type EncodingName = "o200k_base" | "cl100k_base";
+
+/** Choose an encoding for a model id. */
+function encodingFor(model?: string): EncodingName {
+  if (!model) return "o200k_base";
+  // Older OpenAI chat models (gpt-4, gpt-3.5, gpt-4-turbo) use cl100k_base.
+  if (/^gpt-(4-|4$|3\.5|4-turbo)/.test(model)) return "cl100k_base";
+  // gpt-4o / gpt-4.1 / o-series and (approximated) non-OpenAI models.
+  return "o200k_base";
 }
 
-/** Estimate tokens across many strings (e.g. a system prompt + messages). */
-export function estimateTokensFor(
-  ...parts: Array<string | null | undefined>
+const encoderCache = new Map<EncodingName, Tiktoken>();
+
+function getEncoder(name: EncodingName): Tiktoken {
+  let enc = encoderCache.get(name);
+  if (!enc) {
+    enc = getEncoding(name);
+    encoderCache.set(name, enc);
+  }
+  return enc;
+}
+
+/** Count tokens in a piece of text, using the encoding for the given model. */
+export function estimateTokens(
+  text: string | null | undefined,
+  model?: string,
 ): number {
-  return parts.reduce((sum, p) => sum + estimateTokens(p), 0);
+  if (!text) return 0;
+  return getEncoder(encodingFor(model)).encode(text).length;
+}
+
+/** Count tokens across many strings (e.g. a system prompt + messages). */
+export function estimateTokensFor(
+  parts: Array<string | null | undefined>,
+  model?: string,
+): number {
+  return parts.reduce((sum, p) => sum + estimateTokens(p, model), 0);
 }

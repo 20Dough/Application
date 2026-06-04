@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@prisma/client": "^6.2.1",
+    "js-tiktoken": "^1.0.21",
     "mammoth": "^1.12.0",
     "next": "^15.5.18",
     "pdf-parse": "^2.4.5",
