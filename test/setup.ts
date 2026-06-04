@@ -8,9 +8,11 @@ vi.mock("next/headers", async () => {
 
 import { resetDb } from "./db";
 import { cookieStore } from "./cookie-store";
+import { __resetRateLimits } from "@/lib/rate-limit";
 
-// Each test starts from an empty database and no session.
+// Each test starts from an empty database, no session, and fresh rate limits.
 beforeEach(async () => {
   await resetDb();
   cookieStore.__reset();
+  __resetRateLimits();
 });

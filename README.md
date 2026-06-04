@@ -8,7 +8,7 @@ This repository implements the working MVP — the full core collaboration loop 
 
 - **Next.js** (App Router) + **React** + **TypeScript**
 - **Tailwind CSS** (dark theme)
-- **Prisma ORM** with **SQLite** for development (PostgreSQL-compatible schema)
+- **Prisma ORM** with **PostgreSQL**, managed via Prisma Migrate (local Postgres via Docker Compose)
 
 ## What's included
 
@@ -101,6 +101,8 @@ types/
 
 ## Getting started
 
+Requires Node 22 and Docker (for local Postgres).
+
 ```bash
 # 1. Install dependencies
 npm install
@@ -108,20 +110,21 @@ npm install
 # 2. Set up environment variables
 cp .env.example .env
 
-# 3. Create the SQLite database and generate the Prisma client
-npm run db:push
+# 3. Start Postgres (creates the dev + test databases)
+docker compose up -d db
+
+# 4. Apply migrations + generate the Prisma client
+npm run db:deploy
 npm run db:generate
 
-# 4. (Optional) Seed the default team and workspace
+# 5. (Optional) Seed the demo account + workspace (demo@hivemind.dev / password)
 npm run db:seed
 
-# 5. Start the dev server
+# 6. Start the dev server
 npm run dev
 ```
 
-Then open <http://localhost:3000>.
-
-> The UI runs on mock data, so step 5 works even before the database steps.
+Then open <http://localhost:3000> and sign up (or sign in with the seeded demo account).
 
 ## Scripts
 
@@ -131,18 +134,23 @@ Then open <http://localhost:3000>.
 | `npm run build` | Production build |
 | `npm run start` | Run the production build |
 | `npm run lint` | Run ESLint |
-| `npm run test` | Run the test suite (Vitest) |
+| `npm run typecheck` | Type-check with `tsc` |
+| `npm run test` | Run the test suite (Vitest, against Postgres) |
 | `npm run test:watch` | Run tests in watch mode |
-
-> Tests cover both pure logic (crypto, tokenizer, model catalog, mention/agent
-> selection, web-search heuristic, serialization) and **DB-backed integration**
-> (auth + sessions, the message-routing loop, permissions, room passcodes, token
-> budgets, decision summaries). Integration tests run against a dedicated
-> `prisma/test.db` with the cookie store mocked — they never touch the dev db.
-| `npm run db:push` | Apply the Prisma schema to SQLite |
+| `npm run db:migrate` | Create/apply a migration in development |
+| `npm run db:deploy` | Apply pending migrations (CI / production) |
+| `npm run db:reset` | Drop, recreate, and re-migrate the database |
 | `npm run db:generate` | Generate the Prisma client |
 | `npm run db:seed` | Seed a demo account + ARi + Cloudy |
 | `npm run db:studio` | Open Prisma Studio |
+
+> **Tests** cover pure logic (crypto, tokenizer, model catalog, mention/agent
+> selection, web-search heuristic, rate limiter, serialization) and **DB-backed
+> integration** (auth + sessions, the message-routing loop, permissions, room
+> passcodes, token budgets, decision summaries). They run against a dedicated
+> Postgres database (`TEST_DATABASE_URL`) with the cookie store mocked, and
+> `.github/workflows/ci.yml` runs lint + typecheck + tests + build on every push
+> with a Postgres service.
 
 ## Roadmap
 

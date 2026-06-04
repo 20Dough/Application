@@ -1,13 +1,14 @@
 // HiveMind — Prisma schema
-// SQLite for local development. Kept conceptually compatible with PostgreSQL
-// (no enums / no native arrays — statuses and JSON are stored as strings).
+// PostgreSQL, managed with Prisma Migrate. The schema avoids enums / native
+// arrays (statuses and JSON are stored as strings) to keep it simple and
+// portable.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

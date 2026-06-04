@@ -3,6 +3,7 @@
 
 import { NextResponse } from "next/server";
 import { getMemberRole } from "@/lib/permissions";
+import { captureException } from "@/lib/logger";
 import type { WorkspaceRole } from "@/types";
 
 export function ok(data: unknown, init?: ResponseInit) {
@@ -27,6 +28,22 @@ export function notFound(message = "Not found") {
 
 export function serverError(message = "Something went wrong") {
   return NextResponse.json({ error: message }, { status: 500 });
+}
+
+export function tooManyRequests(
+  retryAfter: number,
+  message = "Too many requests",
+) {
+  return NextResponse.json(
+    { error: message },
+    { status: 429, headers: { "Retry-After": String(retryAfter) } },
+  );
+}
+
+/** Log an unexpected error and return a 500. Use in route catch blocks. */
+export function handleError(scope: string, error: unknown) {
+  captureException(scope, error);
+  return serverError();
 }
 
 /** Ensure a user is a member of a workspace and optionally meets a min role. */

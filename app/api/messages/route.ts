@@ -5,14 +5,16 @@ import {
   badRequest,
   forbidden,
   notFound,
-  serverError,
   requireMembership,
   unauthorized,
+  tooManyRequests,
+  handleError,
 } from "@/lib/api";
 import { canSendMessages } from "@/lib/permissions";
 import { serializeMessage } from "@/lib/serialize";
 import { routeMessage } from "@/lib/ai/ai-router";
 import { canAccessRoom } from "@/lib/rooms/passcode";
+import { rateLimit } from "@/lib/rate-limit";
 
 // GET /api/messages?roomId=
 export async function GET(req: Request) {
@@ -36,8 +38,7 @@ export async function GET(req: Request) {
     });
     return ok(messages.map(serializeMessage));
   } catch (err) {
-    console.error("[GET /api/messages]", err);
-    return serverError();
+    return handleError("GET /api/messages", err);
   }
 }
 
@@ -47,6 +48,18 @@ export async function POST(req: Request) {
   try {
     const user = await getCurrentUser();
     if (!user) return unauthorized();
+
+    // Cap how often a user can trigger the AI Router (cost + abuse guard).
+    const limit = rateLimit(`messages:${user.id}`, {
+      limit: 30,
+      windowMs: 60 * 1000,
+    });
+    if (!limit.ok)
+      return tooManyRequests(
+        limit.retryAfter,
+        "You're sending messages too fast",
+      );
+
     const { roomId, content, attachmentIds } = await req.json();
     if (!roomId || !content?.trim())
       return badRequest("roomId and content are required");
@@ -68,7 +81,6 @@ export async function POST(req: Request) {
     });
     return ok(result, { status: 201 });
   } catch (err) {
-    console.error("[POST /api/messages]", err);
-    return serverError();
+    return handleError("POST /api/messages", err);
   }
 }

@@ -1,14 +1,22 @@
 import { db } from "@/lib/db";
-import { ok, badRequest, serverError } from "@/lib/api";
+import { ok, badRequest, tooManyRequests, handleError } from "@/lib/api";
 import { hashSecret } from "@/lib/crypto";
 import { createSession } from "@/lib/auth/session";
 import { serializeUser } from "@/lib/serialize";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 const MIN_PASSWORD_LENGTH = 6;
 
 // POST /api/auth/register — create an account and start a session.
 export async function POST(req: Request) {
   try {
+    const limit = rateLimit(`register:${clientIp(req)}`, {
+      limit: 5,
+      windowMs: 60 * 60 * 1000,
+    });
+    if (!limit.ok)
+      return tooManyRequests(limit.retryAfter, "Too many sign-up attempts");
+
     const { email, name, password } = await req.json();
     if (!email?.trim() || !name?.trim() || !password)
       return badRequest("email, name and password are required");
@@ -36,7 +44,6 @@ export async function POST(req: Request) {
     await createSession(user.id);
     return ok(serializeUser(user), { status: 201 });
   } catch (err) {
-    console.error("[POST /api/auth/register]", err);
-    return serverError();
+    return handleError("POST /api/auth/register", err);
   }
 }
