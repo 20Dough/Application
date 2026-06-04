@@ -4,9 +4,9 @@ import {
   ok,
   badRequest,
   forbidden,
-  serverError,
   requireMembership,
   unauthorized,
+  handleError,
 } from "@/lib/api";
 import { serializeDecision } from "@/lib/serialize";
 
@@ -27,7 +27,6 @@ export async function GET(req: Request) {
     });
     return ok(decisions.map(serializeDecision));
   } catch (err) {
-    console.error("[GET /api/decisions]", err);
-    return serverError();
+    return handleError("GET /api/decisions", err);
   }
 }

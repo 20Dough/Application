@@ -41,6 +41,10 @@ export function applyTheme(theme: Theme): void {
 
 /**
  * Inline script (stringified) that applies the stored/system theme before the
- * first paint, avoiding a flash of the wrong theme. Kept dependency-free.
+ * first paint, avoiding a flash of the wrong theme. Kept dependency-free
+ * because it runs before hydration and can't import.
+ *
+ * COUPLING: this mirrors getStoredTheme() + resolvesToDark() + applyTheme().
+ * It shares THEME_KEY, but if the dark-resolution rule changes, update both.
  */
 export const themeInitScript = `(function(){try{var k='${THEME_KEY}';var t=localStorage.getItem(k)||'system';var d=t==='dark'||(t==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);var e=document.documentElement;e.classList.toggle('dark',d);e.dataset.theme=t;}catch(e){document.documentElement.classList.add('dark');}})();`;

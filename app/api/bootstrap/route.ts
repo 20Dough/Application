@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { ok, serverError, unauthorized } from "@/lib/api";
+import { ok, unauthorized, handleError } from "@/lib/api";
 import { ensureDefaultWorkspace } from "@/lib/bootstrap";
 import {
   serializeAgent,
@@ -76,7 +76,6 @@ export async function GET() {
       messages: messages.map(serializeMessage),
     });
   } catch (err) {
-    console.error("[GET /api/bootstrap]", err);
-    return serverError();
+    return handleError("GET /api/bootstrap", err);
   }
 }

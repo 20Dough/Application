@@ -4,9 +4,9 @@ import {
   ok,
   badRequest,
   forbidden,
-  serverError,
   requireMembership,
   unauthorized,
+  handleError,
 } from "@/lib/api";
 import { canManageWorkspace } from "@/lib/permissions";
 import { serializeMemory } from "@/lib/serialize";
@@ -28,8 +28,7 @@ export async function GET(req: Request) {
     });
     return ok(items.map(serializeMemory));
   } catch (err) {
-    console.error("[GET /api/memory]", err);
-    return serverError();
+    return handleError("GET /api/memory", err);
   }
 }
 
@@ -58,7 +57,6 @@ export async function POST(req: Request) {
     });
     return ok(serializeMemory(item), { status: 201 });
   } catch (err) {
-    console.error("[POST /api/memory]", err);
-    return serverError();
+    return handleError("POST /api/memory", err);
   }
 }

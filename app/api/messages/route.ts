@@ -14,7 +14,7 @@ import { canSendMessages } from "@/lib/permissions";
 import { serializeMessage } from "@/lib/serialize";
 import { routeMessage } from "@/lib/ai/ai-router";
 import { canAccessRoom } from "@/lib/rooms/passcode";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 // GET /api/messages?roomId=
 export async function GET(req: Request) {
@@ -50,10 +50,7 @@ export async function POST(req: Request) {
     if (!user) return unauthorized();
 
     // Cap how often a user can trigger the AI Router (cost + abuse guard).
-    const limit = rateLimit(`messages:${user.id}`, {
-      limit: 30,
-      windowMs: 60 * 1000,
-    });
+    const limit = rateLimit(`messages:${user.id}`, RATE_LIMITS.messages);
     if (!limit.ok)
       return tooManyRequests(
         limit.retryAfter,

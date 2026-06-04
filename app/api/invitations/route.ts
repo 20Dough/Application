@@ -4,9 +4,9 @@ import {
   ok,
   badRequest,
   forbidden,
-  serverError,
   requireMembership,
   unauthorized,
+  handleError,
 } from "@/lib/api";
 import { canManageWorkspace } from "@/lib/permissions";
 import { serializeInvitation } from "@/lib/serialize";
@@ -32,8 +32,7 @@ export async function GET(req: Request) {
     });
     return ok(invitations.map(serializeInvitation));
   } catch (err) {
-    console.error("[GET /api/invitations]", err);
-    return serverError();
+    return handleError("GET /api/invitations", err);
   }
 }
 
@@ -65,7 +64,6 @@ export async function POST(req: Request) {
     });
     return ok(serializeInvitation(invitation), { status: 201 });
   } catch (err) {
-    console.error("[POST /api/invitations]", err);
-    return serverError();
+    return handleError("POST /api/invitations", err);
   }
 }

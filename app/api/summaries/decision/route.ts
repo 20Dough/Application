@@ -5,9 +5,9 @@ import {
   badRequest,
   forbidden,
   notFound,
-  serverError,
   requireMembership,
   unauthorized,
+  handleError,
 } from "@/lib/api";
 import { canSendMessages } from "@/lib/permissions";
 import { canAccessRoom } from "@/lib/rooms/passcode";
@@ -43,7 +43,6 @@ export async function POST(req: Request) {
     });
     return ok(serializeDecision(decision), { status: 201 });
   } catch (err) {
-    console.error("[POST /api/summaries/decision]", err);
-    return serverError();
+    return handleError("POST /api/summaries/decision", err);
   }
 }

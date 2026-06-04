@@ -12,6 +12,19 @@ interface Window {
 
 const buckets = new Map<string, Window>();
 
+// Periodically drop expired windows so the map can't grow without bound from
+// one-off keys (e.g. IPs that never return). Cheap: runs at most once a minute.
+let lastSweep = 0;
+const SWEEP_INTERVAL_MS = 60_000;
+
+function sweepExpired(now: number) {
+  if (now - lastSweep < SWEEP_INTERVAL_MS) return;
+  lastSweep = now;
+  for (const [key, win] of buckets) {
+    if (win.resetAt <= now) buckets.delete(key);
+  }
+}
+
 export interface RateLimitResult {
   ok: boolean;
   /** Remaining requests in the current window. */
@@ -33,6 +46,7 @@ export function rateLimit(
   opts: RateLimitOptions,
 ): RateLimitResult {
   const now = Date.now();
+  sweepExpired(now);
   const existing = buckets.get(key);
 
   if (!existing || existing.resetAt <= now) {
@@ -55,7 +69,18 @@ export function clientIp(req: Request): string {
   return req.headers.get("x-real-ip") ?? "unknown";
 }
 
+/**
+ * Central rate-limit policy — one place to tune throttling for every endpoint.
+ * login/register are keyed per client IP; messages per user.
+ */
+export const RATE_LIMITS = {
+  login: { limit: 10, windowMs: 15 * 60 * 1000 },
+  register: { limit: 5, windowMs: 60 * 60 * 1000 },
+  messages: { limit: 30, windowMs: 60 * 1000 },
+} satisfies Record<string, RateLimitOptions>;
+
 /** Test helper: clear all rate-limit state. */
 export function __resetRateLimits() {
   buckets.clear();
+  lastSweep = 0;
 }

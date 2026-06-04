@@ -4,9 +4,9 @@ import {
   ok,
   forbidden,
   notFound,
-  serverError,
   requireMembership,
   unauthorized,
+  handleError,
 } from "@/lib/api";
 import { canManageWorkspace, getMemberRole } from "@/lib/permissions";
 import { serializeRoom } from "@/lib/serialize";
@@ -27,8 +27,7 @@ export async function GET(_req: Request, { params }: Params) {
     if (!role) return forbidden("Not a member of this workspace");
     return ok(serializeRoom(room));
   } catch (err) {
-    console.error("[GET /api/rooms/:id]", err);
-    return serverError();
+    return handleError("GET /api/rooms/:id", err);
   }
 }
 
@@ -82,8 +81,7 @@ export async function PATCH(req: Request, { params }: Params) {
     });
     return ok(serializeRoom(updated));
   } catch (err) {
-    console.error("[PATCH /api/rooms/:id]", err);
-    return serverError();
+    return handleError("PATCH /api/rooms/:id", err);
   }
 }
 
@@ -103,7 +101,6 @@ export async function DELETE(_req: Request, { params }: Params) {
     await db.room.delete({ where: { id: roomId } });
     return ok({ deleted: true });
   } catch (err) {
-    console.error("[DELETE /api/rooms/:id]", err);
-    return serverError();
+    return handleError("DELETE /api/rooms/:id", err);
   }
 }

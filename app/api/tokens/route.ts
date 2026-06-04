@@ -3,9 +3,9 @@ import {
   ok,
   badRequest,
   forbidden,
-  serverError,
   requireMembership,
   unauthorized,
+  handleError,
 } from "@/lib/api";
 import { getWorkspaceBudget, getAppTokenStats } from "@/lib/tokens/budget";
 import type { TokenInfo } from "@/types";
@@ -29,7 +29,6 @@ export async function GET(req: Request) {
     const info: TokenInfo = { workspace, app };
     return ok(info);
   } catch (err) {
-    console.error("[GET /api/tokens]", err);
-    return serverError();
+    return handleError("GET /api/tokens", err);
   }
 }

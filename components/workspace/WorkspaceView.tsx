@@ -343,18 +343,16 @@ export function WorkspaceView() {
   return (
     <div className="relative flex h-screen w-full overflow-hidden">
       {/* Backdrops for the mobile/tablet drawers */}
-      {navOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
-          onClick={() => setNavOpen(false)}
-        />
-      )}
-      {infoOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-black/50 xl:hidden"
-          onClick={() => setInfoOpen(false)}
-        />
-      )}
+      <Backdrop
+        show={navOpen}
+        hideClass="lg:hidden"
+        onClose={() => setNavOpen(false)}
+      />
+      <Backdrop
+        show={infoOpen}
+        hideClass="xl:hidden"
+        onClose={() => setInfoOpen(false)}
+      />
 
       {/* Sidebar — drawer below lg, static column at lg+ */}
       <div
@@ -383,26 +381,24 @@ export function WorkspaceView() {
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {/* Mobile/tablet top bar */}
         <div className="flex items-center gap-2 border-b border-hive-border bg-hive-surface px-3 py-2 xl:hidden">
-          <button
-            type="button"
+          <IconButton
             onClick={() => setNavOpen(true)}
             title="Open menu"
-            className="flex h-8 w-8 items-center justify-center rounded-md text-hive-muted transition hover:bg-hive-panel hover:text-hive-text lg:hidden"
+            className="lg:hidden"
           >
             ☰
-          </button>
+          </IconButton>
           <span className="flex flex-1 items-center gap-1.5 truncate text-sm font-semibold text-hive-text">
             <span aria-hidden>🐝</span>
             <span className="truncate">{activeRoom.name}</span>
           </span>
-          <button
-            type="button"
+          <IconButton
             onClick={() => setInfoOpen(true)}
             title="Open details"
-            className="flex h-8 w-8 items-center justify-center rounded-md text-base text-hive-muted transition hover:bg-hive-panel hover:text-hive-text"
+            className="text-base"
           >
             ⓘ
-          </button>
+          </IconButton>
         </div>
 
         {roomLocked ? (
@@ -448,5 +444,51 @@ export function WorkspaceView() {
         />
       </div>
     </div>
+  );
+}
+
+/** Dimmed click-to-close layer behind a mobile/tablet drawer. */
+function Backdrop({
+  show,
+  hideClass,
+  onClose,
+}: {
+  show: boolean;
+  hideClass: string;
+  onClose: () => void;
+}) {
+  if (!show) return null;
+  return (
+    <div
+      className={cn("fixed inset-0 z-30 bg-black/50", hideClass)}
+      onClick={onClose}
+    />
+  );
+}
+
+/** Small square icon button used in the mobile/tablet top bar. */
+function IconButton({
+  onClick,
+  title,
+  className,
+  children,
+}: {
+  onClick: () => void;
+  title: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className={cn(
+        "flex h-8 w-8 items-center justify-center rounded-md text-hive-muted transition hover:bg-hive-panel hover:text-hive-text",
+        className,
+      )}
+    >
+      {children}
+    </button>
   );
 }

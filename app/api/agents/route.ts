@@ -4,9 +4,9 @@ import {
   ok,
   badRequest,
   forbidden,
-  serverError,
   requireMembership,
   unauthorized,
+  handleError,
 } from "@/lib/api";
 import { canManageWorkspace } from "@/lib/permissions";
 import { serializeAgent } from "@/lib/serialize";
@@ -28,8 +28,7 @@ export async function GET(req: Request) {
     });
     return ok(agents.map(serializeAgent));
   } catch (err) {
-    console.error("[GET /api/agents]", err);
-    return serverError();
+    return handleError("GET /api/agents", err);
   }
 }
 
@@ -70,7 +69,6 @@ export async function POST(req: Request) {
     });
     return ok(serializeAgent(agent), { status: 201 });
   } catch (err) {
-    console.error("[POST /api/agents]", err);
-    return serverError();
+    return handleError("POST /api/agents", err);
   }
 }

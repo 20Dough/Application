@@ -3,17 +3,14 @@ import { ok, badRequest, tooManyRequests, handleError } from "@/lib/api";
 import { hashSecret } from "@/lib/crypto";
 import { createSession } from "@/lib/auth/session";
 import { serializeUser } from "@/lib/serialize";
-import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { rateLimit, clientIp, RATE_LIMITS } from "@/lib/rate-limit";
 
 const MIN_PASSWORD_LENGTH = 6;
 
 // POST /api/auth/register — create an account and start a session.
 export async function POST(req: Request) {
   try {
-    const limit = rateLimit(`register:${clientIp(req)}`, {
-      limit: 5,
-      windowMs: 60 * 60 * 1000,
-    });
+    const limit = rateLimit(`register:${clientIp(req)}`, RATE_LIMITS.register);
     if (!limit.ok)
       return tooManyRequests(limit.retryAfter, "Too many sign-up attempts");
 

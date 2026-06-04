@@ -5,9 +5,9 @@ import {
   badRequest,
   forbidden,
   notFound,
-  serverError,
   requireMembership,
   unauthorized,
+  handleError,
 } from "@/lib/api";
 import { verifyPasscode } from "@/lib/rooms/passcode";
 
@@ -40,7 +40,6 @@ export async function POST(req: Request, { params }: Params) {
 
     return ok({ unlocked: true });
   } catch (err) {
-    console.error("[POST /api/rooms/:id/verify]", err);
-    return serverError();
+    return handleError("POST /api/rooms/:id/verify", err);
   }
 }

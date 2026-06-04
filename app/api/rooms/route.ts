@@ -4,9 +4,9 @@ import {
   ok,
   badRequest,
   forbidden,
-  serverError,
   requireMembership,
   unauthorized,
+  handleError,
 } from "@/lib/api";
 import { serializeRoom } from "@/lib/serialize";
 
@@ -27,8 +27,7 @@ export async function GET(req: Request) {
     });
     return ok(rooms.map(serializeRoom));
   } catch (err) {
-    console.error("[GET /api/rooms]", err);
-    return serverError();
+    return handleError("GET /api/rooms", err);
   }
 }
 
@@ -55,7 +54,6 @@ export async function POST(req: Request) {
     });
     return ok(serializeRoom(room), { status: 201 });
   } catch (err) {
-    console.error("[POST /api/rooms]", err);
-    return serverError();
+    return handleError("POST /api/rooms", err);
   }
 }

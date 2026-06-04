@@ -9,16 +9,13 @@ import {
 import { verifySecret } from "@/lib/crypto";
 import { createSession } from "@/lib/auth/session";
 import { serializeUser } from "@/lib/serialize";
-import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { rateLimit, clientIp, RATE_LIMITS } from "@/lib/rate-limit";
 
 // POST /api/auth/login — verify credentials and start a session.
 export async function POST(req: Request) {
   try {
     // Throttle login attempts per client to slow credential-stuffing.
-    const limit = rateLimit(`login:${clientIp(req)}`, {
-      limit: 10,
-      windowMs: 15 * 60 * 1000,
-    });
+    const limit = rateLimit(`login:${clientIp(req)}`, RATE_LIMITS.login);
     if (!limit.ok)
       return tooManyRequests(limit.retryAfter, "Too many login attempts");
 

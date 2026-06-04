@@ -5,9 +5,9 @@ import {
   badRequest,
   forbidden,
   notFound,
-  serverError,
   requireMembership,
   unauthorized,
+  handleError,
 } from "@/lib/api";
 import { canSendMessages } from "@/lib/permissions";
 import { canAccessRoom } from "@/lib/rooms/passcode";
@@ -37,8 +37,7 @@ export async function GET(req: Request) {
     });
     return ok(attachments.map((a) => serializeAttachment(a)));
   } catch (err) {
-    console.error("[GET /api/files]", err);
-    return serverError();
+    return handleError("GET /api/files", err);
   }
 }
 
@@ -83,7 +82,6 @@ export async function POST(req: Request) {
 
     return ok(serializeAttachment(attachment), { status: 201 });
   } catch (err) {
-    console.error("[POST /api/files]", err);
-    return serverError();
+    return handleError("POST /api/files", err);
   }
 }
