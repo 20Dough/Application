@@ -130,7 +130,7 @@ Example room:
 
 Humans:
 
-* Van
+* Maya
 * Nattanid
 * Alice
 * Bob
@@ -244,7 +244,7 @@ The first official HiveMind development team is:
 
 Human:
 
-* Van, Founder and Product Vision Lead
+* The founder, Product Vision Lead
 
 AI:
 
@@ -306,7 +306,7 @@ AI to AI:
 @Cloudy please review this database schema for scalability issues.
 
 AI to Human:
-@Van I found two important tradeoffs in this plan.
+@Maya I found two important tradeoffs in this plan.
 
 Human to Human:
 @Nattanid what do you think about this branding direction?

@@ -1,6 +1,6 @@
-// Seed script — creates the canonical initial HiveMind team described in
-// PROJECT_VISION.md: founder Van, with default agents ARi (OpenAI) and
-// Cloudy (Anthropic). Run with: npm run db:seed
+// Seed script — creates a demo workspace with the default agents ARi (OpenAI)
+// and Cloudy (Anthropic), owned by a demo account you can sign in with.
+// Run with: npm run db:seed
 
 import { PrismaClient } from "@prisma/client";
 import { randomBytes, scryptSync } from "crypto";
@@ -15,13 +15,13 @@ function hashSecret(secret: string) {
 }
 
 async function main() {
-  // Founder — seeded with a dev password so you can log in immediately.
-  const email = process.env.DEV_USER_EMAIL ?? "van@hivemind.dev";
-  const name = process.env.DEV_USER_NAME ?? "Van";
-  const password = process.env.DEV_USER_PASSWORD ?? "password";
+  // Demo account — seeded with a dev password so you can log in immediately.
+  const email = process.env.SEED_EMAIL ?? "demo@hivemind.dev";
+  const name = process.env.SEED_NAME ?? "Demo";
+  const password = process.env.SEED_PASSWORD ?? "password";
   const { hash, salt } = hashSecret(password);
 
-  const van = await db.user.upsert({
+  const owner = await db.user.upsert({
     where: { email },
     update: { passwordHash: hash, passwordSalt: salt },
     create: { email, name, passwordHash: hash, passwordSalt: salt },
@@ -36,16 +36,16 @@ async function main() {
       name: "AI Team Up",
       description:
         "Building HiveMind — a human + AI team collaboration workspace.",
-      ownerId: van.id,
+      ownerId: owner.id,
     },
   });
 
   await db.workspaceMember.upsert({
     where: {
-      userId_workspaceId: { userId: van.id, workspaceId: workspace.id },
+      userId_workspaceId: { userId: owner.id, workspaceId: workspace.id },
     },
     update: {},
-    create: { userId: van.id, workspaceId: workspace.id, role: "owner" },
+    create: { userId: owner.id, workspaceId: workspace.id, role: "owner" },
   });
 
   // Default agents
@@ -91,7 +91,7 @@ async function main() {
       name: "App Development",
       description: "Designing and building the HiveMind MVP.",
       defaultAgentId: ari.id,
-      createdById: van.id,
+      createdById: owner.id,
     },
   });
 
@@ -122,7 +122,7 @@ async function main() {
     },
   });
 
-  console.log("✅ Seed complete: Van + ARi + Cloudy in 'AI Team Up'.");
+  console.log(`✅ Seed complete: ${name} + ARi + Cloudy in 'AI Team Up'.`);
 }
 
 main()

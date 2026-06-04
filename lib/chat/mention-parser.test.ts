@@ -29,7 +29,7 @@ describe("extractMentions", () => {
   });
 
   it("does NOT treat an email address as a mention", () => {
-    expect(extractMentions("contact van@example.com please")).toEqual([]);
+    expect(extractMentions("contact user@example.com please")).toEqual([]);
   });
 
   it("matches a mention after punctuation or whitespace", () => {

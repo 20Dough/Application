@@ -20,7 +20,7 @@ App Development
 
 The room includes humans:
 
-* Van
+* Maya
 * Another invited human teammate
 
 The room includes AI agents:

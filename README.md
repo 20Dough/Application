@@ -94,7 +94,7 @@ lib/
   summary/decision-summary.ts
 prisma/
   schema.prisma        All core entities
-  seed.ts              Seeds Van + ARi + Cloudy
+  seed.ts              Seeds a demo account + ARi + Cloudy
 types/
   index.ts             Shared domain types
 ```
@@ -135,7 +135,7 @@ Then open <http://localhost:3000>.
 | `npm run test:watch` | Run tests in watch mode |
 | `npm run db:push` | Apply the Prisma schema to SQLite |
 | `npm run db:generate` | Generate the Prisma client |
-| `npm run db:seed` | Seed Van + ARi + Cloudy |
+| `npm run db:seed` | Seed a demo account + ARi + Cloudy |
 | `npm run db:studio` | Open Prisma Studio |
 
 ## Roadmap

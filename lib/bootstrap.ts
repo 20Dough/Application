@@ -1,6 +1,7 @@
-// Ensures the canonical default workspace exists (Van + ARi + Cloudy + a
-// starter room) so the app is usable immediately on a fresh database. This is
-// the same data as prisma/seed.ts but runs on demand from the bootstrap route.
+// Ensures a default workspace exists for a user (their own workspace + the
+// default agents ARi + Cloudy + a starter room) so the app is usable
+// immediately on first sign-in. Mirrors prisma/seed.ts but runs on demand from
+// the bootstrap route.
 
 import { db } from "@/lib/db";
 
