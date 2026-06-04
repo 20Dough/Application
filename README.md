@@ -131,8 +131,14 @@ Then open <http://localhost:3000>.
 | `npm run build` | Production build |
 | `npm run start` | Run the production build |
 | `npm run lint` | Run ESLint |
-| `npm run test` | Run the unit tests (Vitest) |
+| `npm run test` | Run the test suite (Vitest) |
 | `npm run test:watch` | Run tests in watch mode |
+
+> Tests cover both pure logic (crypto, tokenizer, model catalog, mention/agent
+> selection, web-search heuristic, serialization) and **DB-backed integration**
+> (auth + sessions, the message-routing loop, permissions, room passcodes, token
+> budgets, decision summaries). Integration tests run against a dedicated
+> `prisma/test.db` with the cookie store mocked — they never touch the dev db.
 | `npm run db:push` | Apply the Prisma schema to SQLite |
 | `npm run db:generate` | Generate the Prisma client |
 | `npm run db:seed` | Seed a demo account + ARi + Cloudy |
