@@ -9,11 +9,12 @@ import {
   handleError,
 } from "@/lib/api";
 import { canManageWorkspace } from "@/lib/permissions";
+import { canAccessRoom } from "@/lib/rooms/passcode";
 
 type Params = { params: Promise<{ id: string }> };
 
 // DELETE /api/room-agents/[id] — remove an agent from a room
-export async function DELETE(_req: Request, { params }: Params) {
+export async function DELETE(req: Request, { params }: Params) {
   try {
     const { id } = await params;
     const user = await getCurrentUser();
@@ -27,6 +28,7 @@ export async function DELETE(_req: Request, { params }: Params) {
     const role = await requireMembership(user.id, roomAgent.room.workspaceId);
     if (!canManageWorkspace(role))
       return forbidden("Only admins/owners can manage room agents");
+    if (!canAccessRoom(roomAgent.room, req)) return forbidden("Room is locked");
 
     await db.roomAgent.delete({ where: { id } });
     return ok({ deleted: true });
