@@ -4,6 +4,8 @@
 // in development. `captureException` is where an error monitor (e.g. Sentry)
 // would hook in — wire it up by setting SENTRY_DSN and forwarding here.
 
+import { reportException } from "@/lib/monitoring";
+
 type Level = "info" | "warn" | "error";
 
 function emit(level: Level, message: string, meta?: Record<string, unknown>) {
@@ -44,6 +46,6 @@ export function captureException(
   const stack = error instanceof Error ? error.stack : undefined;
   logger.error(`[${scope}] ${message}`, { ...meta, stack });
 
-  // Hook point for Sentry/Datadog/etc.:
-  //   if (process.env.SENTRY_DSN) Sentry.captureException(error, { extra: meta });
+  // Forward to Sentry when configured (no-op otherwise).
+  reportException(error, { scope, ...meta });
 }

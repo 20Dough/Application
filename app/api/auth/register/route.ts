@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { ok, badRequest, tooManyRequests, handleError } from "@/lib/api";
 import { hashSecret } from "@/lib/crypto";
 import { createSession } from "@/lib/auth/session";
+import { sendVerificationEmail } from "@/lib/auth/email-flows";
 import { serializeUser } from "@/lib/serialize";
 import { rateLimit, clientIp, RATE_LIMITS } from "@/lib/rate-limit";
 
@@ -39,6 +40,7 @@ export async function POST(req: Request) {
     });
 
     await createSession(user.id);
+    await sendVerificationEmail(user.id, user.email);
     return ok(serializeUser(user), { status: 201 });
   } catch (err) {
     return handleError("POST /api/auth/register", err);

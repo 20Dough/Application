@@ -5,5 +5,9 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     const { validateServerEnv } = await import("@/lib/env");
     validateServerEnv();
+
+    // Initialize error monitoring (no-op unless SENTRY_DSN is set).
+    const { initMonitoring } = await import("@/lib/monitoring");
+    await initMonitoring();
   }
 }

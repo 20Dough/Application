@@ -68,6 +68,29 @@ export async function logout(): Promise<void> {
   await fetch("/api/auth/logout", { method: "POST" });
 }
 
+export async function verifyEmail(
+  token: string,
+): Promise<{ verified: boolean }> {
+  return postJson("/api/auth/verify-email", { token });
+}
+
+export async function resendVerification(): Promise<{ sent: boolean }> {
+  return postJson("/api/auth/resend-verification", {});
+}
+
+export async function forgotPassword(
+  email: string,
+): Promise<{ sent: boolean }> {
+  return postJson("/api/auth/forgot-password", { email });
+}
+
+export async function resetPassword(
+  token: string,
+  password: string,
+): Promise<{ reset: boolean }> {
+  return postJson("/api/auth/reset-password", { token, password });
+}
+
 /** Header carrying a room passcode for locked rooms (omitted when none). */
 function passcodeHeader(passcode?: string): Record<string, string> {
   return passcode ? { "x-room-passcode": passcode } : {};
