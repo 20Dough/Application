@@ -28,6 +28,7 @@ This repository implements the working MVP — the full core collaboration loop 
 - **Context builder** with the spec's priority order (ProjectContext before Memory) + attachments + web results
 - **Decision summaries** with selectable ranges — last 30 messages / past 2 hours / past day / whole project
 - **Real auth** — email + password with server-side sessions (scrypt-hashed, httpOnly cookie); every API route is gated and each user gets their own workspace
+  - **Email verification, password reset, and invitation emails** (via Resend, with a console-log fallback when no key is set) + optional **Sentry** error monitoring
 - Role-based permissions (owner / admin / member / viewer)
 - **Per-room passcodes** — only the room creator can set/clear a passcode; locked rooms are gated client- and server-side
 - **Human collaboration** — workspace members, invitations (invite by email), room-agent membership
@@ -40,7 +41,8 @@ This repository implements the working MVP — the full core collaboration loop 
 
 | Resource | Routes |
 | --- | --- |
-| Auth | `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout` |
+| Auth | `POST /api/auth/{register,login,logout}` |
+| Auth (email) | `POST /api/auth/{verify-email,resend-verification,forgot-password,reset-password}` |
 | Workspaces | `GET/POST /api/workspaces`, `GET/PATCH/DELETE /api/workspaces/[id]` |
 | Rooms | `GET/POST /api/rooms`, `GET/PATCH/DELETE /api/rooms/[id]` |
 | Messages | `GET/POST /api/messages` (POST runs the AI Router) |

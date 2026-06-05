@@ -41,6 +41,7 @@ type RawUser = {
   email: string;
   name: string;
   avatarUrl: string | null;
+  emailVerified?: Date | null;
   createdAt: Date;
   updatedAt: Date;
   // May be present on the Prisma row — explicitly NOT forwarded to the client.
@@ -54,6 +55,7 @@ export function serializeUser(u: RawUser): User {
     email: u.email,
     name: u.name,
     avatarUrl: u.avatarUrl ?? null,
+    emailVerified: u.emailVerified ? iso(u.emailVerified) : null,
     createdAt: iso(u.createdAt),
     updatedAt: iso(u.updatedAt),
   };

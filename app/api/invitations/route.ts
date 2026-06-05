@@ -10,6 +10,8 @@ import {
 } from "@/lib/api";
 import { canManageWorkspace } from "@/lib/permissions";
 import { serializeInvitation } from "@/lib/serialize";
+import { sendEmail, appUrl } from "@/lib/email/send";
+import { invitationEmail } from "@/lib/email/templates";
 import type { WorkspaceRole } from "@/types";
 
 const VALID_ROLES: WorkspaceRole[] = ["admin", "member", "viewer"];
@@ -36,8 +38,8 @@ export async function GET(req: Request) {
   }
 }
 
-// POST /api/invitations — invite a user by email (admin/owner only).
-// MVP: stores the invitation; email sending can be added later.
+// POST /api/invitations — invite a user by email (admin/owner only) and email
+// them a link to the workspace.
 export async function POST(req: Request) {
   try {
     const user = await getCurrentUser();
@@ -54,6 +56,10 @@ export async function POST(req: Request) {
       ? invitedRole
       : "member";
 
+    const workspace = await db.workspace.findUnique({
+      where: { id: workspaceId },
+    });
+
     const invitation = await db.invitation.create({
       data: {
         workspaceId,
@@ -62,6 +68,15 @@ export async function POST(req: Request) {
         status: "pending",
       },
     });
+
+    await sendEmail(
+      invitationEmail(
+        invitation.email,
+        workspace?.name ?? "a workspace",
+        appUrl(),
+      ),
+    );
+
     return ok(serializeInvitation(invitation), { status: 201 });
   } catch (err) {
     return handleError("POST /api/invitations", err);

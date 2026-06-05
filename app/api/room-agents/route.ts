@@ -10,6 +10,7 @@ import {
   handleError,
 } from "@/lib/api";
 import { canManageWorkspace } from "@/lib/permissions";
+import { canAccessRoom } from "@/lib/rooms/passcode";
 import { serializeRoomAgent } from "@/lib/serialize";
 
 // GET /api/room-agents?roomId= — agents attached to a room
@@ -25,6 +26,7 @@ export async function GET(req: Request) {
 
     const role = await requireMembership(user.id, room.workspaceId);
     if (!role) return forbidden("Not a member of this workspace");
+    if (!canAccessRoom(room, req)) return forbidden("Room is locked");
 
     const roomAgents = await db.roomAgent.findMany({
       where: { roomId },
@@ -52,6 +54,7 @@ export async function POST(req: Request) {
     const role = await requireMembership(user.id, room.workspaceId);
     if (!canManageWorkspace(role))
       return forbidden("Only admins/owners can manage room agents");
+    if (!canAccessRoom(room, req)) return forbidden("Room is locked");
 
     // Ensure the agent belongs to the same workspace as the room.
     const agent = await db.agent.findUnique({ where: { id: agentId } });

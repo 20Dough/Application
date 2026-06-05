@@ -16,6 +16,8 @@ export interface User {
   email: string;
   name: string;
   avatarUrl?: string | null;
+  /** ISO timestamp when the email was verified, or null if unverified. */
+  emailVerified?: string | null;
   createdAt: string;
   updatedAt: string;
 }

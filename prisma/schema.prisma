@@ -17,26 +17,42 @@ datasource db {
 // ---------------------------------------------------------------------------
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String
-  avatarUrl    String?
-  passwordHash String? // scrypt hash; null = account has no password yet
-  passwordSalt String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  avatarUrl     String?
+  passwordHash  String? // scrypt hash; null = account has no password yet
+  passwordSalt  String?
+  emailVerified DateTime? // when the email was confirmed; null = unverified
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   ownedWorkspaces Workspace[]       @relation("WorkspaceOwner")
   memberships     WorkspaceMember[]
   messages        Message[]
   usageLogs       UsageLog[]
   sessions        Session[]
+  authTokens      AuthToken[]
 }
 
 // Server-side login sessions. The token lives in an httpOnly cookie.
 model Session {
   id        String   @id @default(cuid())
   token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Single-use tokens for email verification and password reset.
+model AuthToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  type      String // "verify_email" | "password_reset"
   userId    String
   expiresAt DateTime
   createdAt DateTime @default(now())
